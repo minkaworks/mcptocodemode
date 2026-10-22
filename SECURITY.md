@@ -12,7 +12,8 @@ There is no bounty. We answer the report, fix a supported version or say why we 
 
 | Version | Fixes |
 | --- | --- |
-| 0.1.x | Yes |
+| 0.2.x | Yes |
+| 0.1.x | No |
 
 ## Scope
 

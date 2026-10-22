@@ -1,5 +1,5 @@
 {
-  "at": "2026-10-22T23:19:00.877Z",
+  "at": "2026-10-22T23:40:58.408Z",
   "node": "v26.12.1",
   "protocol": "0.1",
   "servers": [
@@ -75,15 +75,15 @@
     },
     "codeMode": {
       "tools": 3,
-      "bytes": 2471,
+      "bytes": 2581,
       "largest": [
         {
           "name": "execute",
-          "bytes": 974
+          "bytes": 1027
         },
         {
           "name": "search",
-          "bytes": 867
+          "bytes": 924
         },
         {
           "name": "describe",
@@ -94,8 +94,8 @@
     "inlineSdk": {
       "tools": 1,
       "sdkBytes": 22149,
-      "executeToolBytes": 974,
-      "bytes": 23123
+      "executeToolBytes": 1027,
+      "bytes": 23176
     }
   },
   "discovery": {
@@ -115,41 +115,41 @@
   "task": {
     "direct": [
       {
-        "ms": 2745,
+        "ms": 2559,
         "bytes": 5823,
         "calls": [
           {
             "method": "time.get_current_time",
-            "ok": true,
-            "ms": 27,
-            "bytes": 113,
-            "preview": "{\"timezone\":\"America/Mexico_City\",\"datetime\":\"2026-10-22T17:19:01-06:00\",\"day_of_week\":\"Thursday\",\"i"
-          },
-          {
-            "method": "filesystem.read_text_file",
-            "ok": true,
-            "ms": 2,
-            "bytes": 48,
-            "preview": "{\"content\":\"hello from the filesystem server\\n\"}"
-          },
-          {
-            "method": "git.git_log",
-            "ok": true,
-            "ms": 103,
-            "bytes": 133,
-            "preview": "\"Commit history:\\nCommit: 4d963ffbb56f56b20f707dcf272a605a5b263c0d\\nAuthor: demo\\nDate: 2026-10-22 1"
-          },
-          {
-            "method": "sequential_thinking.sequentialthinking",
             "ok": true,
             "ms": 7,
+            "bytes": 113,
+            "preview": "{\"timezone\":\"America/Mexico_City\",\"datetime\":\"2026-10-22T17:40:58-06:00\",\"day_of_week\":\"Thursday\",\"i"
+          },
+          {
+            "method": "filesystem.read_text_file",
+            "ok": true,
+            "ms": 1,
+            "bytes": 48,
+            "preview": "{\"content\":\"hello from the filesystem server\\n\"}"
+          },
+          {
+            "method": "git.git_log",
+            "ok": true,
+            "ms": 47,
+            "bytes": 133,
+            "preview": "\"Commit history:\\nCommit: 4d963ffbb56f56b20f707dcf272a605a5b263c0d\\nAuthor: demo\\nDate: 2026-10-22 1"
+          },
+          {
+            "method": "sequential_thinking.sequentialthinking",
+            "ok": true,
+            "ms": 4,
             "bytes": 102,
             "preview": "{\"thoughtNumber\":1,\"totalThoughts\":1,\"nextThoughtNeeded\":false,\"branches\":[],\"thoughtHistoryLength\":"
           },
           {
             "method": "memory.create_entities",
             "ok": true,
-            "ms": 12,
+            "ms": 7,
             "bytes": 43,
             "preview": "{\"entities\":[],\"skipped\":[\"MCPtoCodeMode\"]}"
           },
@@ -163,7 +163,7 @@
           {
             "method": "fetch.fetch",
             "ok": true,
-            "ms": 2587,
+            "ms": 2488,
             "bytes": 5223,
             "preview": "\"Contents of https://github.com/modelcontextprotocol/servers:\\nThis repository is a collection of *r"
           },
@@ -177,7 +177,7 @@
         ]
       },
       {
-        "ms": 1978,
+        "ms": 1792,
         "bytes": 5823,
         "calls": [
           {
@@ -185,7 +185,7 @@
             "ok": true,
             "ms": 2,
             "bytes": 113,
-            "preview": "{\"timezone\":\"America/Mexico_City\",\"datetime\":\"2026-10-22T17:19:05-06:00\",\"day_of_week\":\"Thursday\",\"i"
+            "preview": "{\"timezone\":\"America/Mexico_City\",\"datetime\":\"2026-10-22T17:41:03-06:00\",\"day_of_week\":\"Thursday\",\"i"
           },
           {
             "method": "filesystem.read_text_file",
@@ -197,7 +197,7 @@
           {
             "method": "git.git_log",
             "ok": true,
-            "ms": 57,
+            "ms": 45,
             "bytes": 133,
             "preview": "\"Commit history:\\nCommit: 4d963ffbb56f56b20f707dcf272a605a5b263c0d\\nAuthor: demo\\nDate: 2026-10-22 1"
           },
@@ -225,7 +225,7 @@
           {
             "method": "fetch.fetch",
             "ok": true,
-            "ms": 1913,
+            "ms": 1740,
             "bytes": 5223,
             "preview": "\"Contents of https://github.com/modelcontextprotocol/servers:\\nThis repository is a collection of *r"
           },
@@ -239,27 +239,27 @@
         ]
       },
       {
-        "ms": 2529,
+        "ms": 2285,
         "bytes": 5823,
         "calls": [
           {
             "method": "time.get_current_time",
             "ok": true,
-            "ms": 3,
+            "ms": 1,
             "bytes": 113,
-            "preview": "{\"timezone\":\"America/Mexico_City\",\"datetime\":\"2026-10-22T17:19:10-06:00\",\"day_of_week\":\"Thursday\",\"i"
+            "preview": "{\"timezone\":\"America/Mexico_City\",\"datetime\":\"2026-10-22T17:41:06-06:00\",\"day_of_week\":\"Thursday\",\"i"
           },
           {
             "method": "filesystem.read_text_file",
             "ok": true,
-            "ms": 2,
+            "ms": 1,
             "bytes": 48,
             "preview": "{\"content\":\"hello from the filesystem server\\n\"}"
           },
           {
             "method": "git.git_log",
             "ok": true,
-            "ms": 82,
+            "ms": 46,
             "bytes": 133,
             "preview": "\"Commit history:\\nCommit: 4d963ffbb56f56b20f707dcf272a605a5b263c0d\\nAuthor: demo\\nDate: 2026-10-22 1"
           },
@@ -273,21 +273,21 @@
           {
             "method": "memory.create_entities",
             "ok": true,
-            "ms": 3,
+            "ms": 2,
             "bytes": 43,
             "preview": "{\"entities\":[],\"skipped\":[\"MCPtoCodeMode\"]}"
           },
           {
             "method": "memory.read_graph",
             "ok": true,
-            "ms": 1,
+            "ms": 0,
             "bytes": 134,
             "preview": "{\"entities\":[{\"name\":\"MCPtoCodeMode\",\"entityType\":\"project\",\"observations\":[\"Gateway in front of man"
           },
           {
             "method": "fetch.fetch",
             "ok": true,
-            "ms": 2437,
+            "ms": 2233,
             "bytes": 5223,
             "preview": "\"Contents of https://github.com/modelcontextprotocol/servers:\\nThis repository is a collection of *r"
           },
@@ -303,47 +303,97 @@
     ],
     "code": [
       {
-        "ms": 2123,
+        "ms": 2094,
         "ok": true,
         "bytes": 827,
         "resultBytes": 286,
         "error": null,
-        "upstreamMs": 2116,
+        "upstreamMs": 2090,
         "calls": [
           {
             "method": "time.get_current_time",
             "ok": true,
-            "ms": 1
+            "ms": 2
           },
           {
             "method": "filesystem.read_text_file",
+            "ok": true,
+            "ms": 1
+          },
+          {
+            "method": "git.git_log",
+            "ok": true,
+            "ms": 46
+          },
+          {
+            "method": "sequential_thinking.sequentialthinking",
+            "ok": true,
+            "ms": 1
+          },
+          {
+            "method": "memory.create_entities",
+            "ok": true,
+            "ms": 2
+          },
+          {
+            "method": "memory.read_graph",
+            "ok": true,
+            "ms": 1
+          },
+          {
+            "method": "fetch.fetch",
+            "ok": true,
+            "ms": 2037
+          },
+          {
+            "method": "everything.echo",
+            "ok": true,
+            "ms": 0
+          }
+        ]
+      },
+      {
+        "ms": 1713,
+        "ok": true,
+        "bytes": 827,
+        "resultBytes": 286,
+        "error": null,
+        "upstreamMs": 1711,
+        "calls": [
+          {
+            "method": "time.get_current_time",
+            "ok": true,
+            "ms": 2
+          },
+          {
+            "method": "filesystem.read_text_file",
+            "ok": true,
+            "ms": 1
+          },
+          {
+            "method": "git.git_log",
+            "ok": true,
+            "ms": 45
+          },
+          {
+            "method": "sequential_thinking.sequentialthinking",
+            "ok": true,
+            "ms": 1
+          },
+          {
+            "method": "memory.create_entities",
+            "ok": true,
+            "ms": 2
+          },
+          {
+            "method": "memory.read_graph",
             "ok": true,
             "ms": 0
           },
           {
-            "method": "git.git_log",
-            "ok": true,
-            "ms": 55
-          },
-          {
-            "method": "sequential_thinking.sequentialthinking",
-            "ok": true,
-            "ms": 2
-          },
-          {
-            "method": "memory.create_entities",
-            "ok": true,
-            "ms": 3
-          },
-          {
-            "method": "memory.read_graph",
-            "ok": true,
-            "ms": 1
-          },
-          {
             "method": "fetch.fetch",
             "ok": true,
-            "ms": 2053
+            "ms": 1659
           },
           {
             "method": "everything.echo",
@@ -353,77 +403,27 @@
         ]
       },
       {
-        "ms": 2726,
-        "ok": true,
-        "bytes": 828,
-        "resultBytes": 286,
-        "error": null,
-        "upstreamMs": 2720,
-        "calls": [
-          {
-            "method": "time.get_current_time",
-            "ok": true,
-            "ms": 2
-          },
-          {
-            "method": "filesystem.read_text_file",
-            "ok": true,
-            "ms": 1
-          },
-          {
-            "method": "git.git_log",
-            "ok": true,
-            "ms": 620
-          },
-          {
-            "method": "sequential_thinking.sequentialthinking",
-            "ok": true,
-            "ms": 1
-          },
-          {
-            "method": "memory.create_entities",
-            "ok": true,
-            "ms": 5
-          },
-          {
-            "method": "memory.read_graph",
-            "ok": true,
-            "ms": 1
-          },
-          {
-            "method": "fetch.fetch",
-            "ok": true,
-            "ms": 2088
-          },
-          {
-            "method": "everything.echo",
-            "ok": true,
-            "ms": 2
-          }
-        ]
-      },
-      {
-        "ms": 5093,
+        "ms": 1756,
         "ok": true,
         "bytes": 827,
         "resultBytes": 286,
         "error": null,
-        "upstreamMs": 5087,
+        "upstreamMs": 1754,
         "calls": [
           {
             "method": "time.get_current_time",
             "ok": true,
-            "ms": 4
+            "ms": 1
           },
           {
             "method": "filesystem.read_text_file",
             "ok": true,
-            "ms": 2
+            "ms": 1
           },
           {
             "method": "git.git_log",
             "ok": true,
-            "ms": 86
+            "ms": 45
           },
           {
             "method": "sequential_thinking.sequentialthinking",
@@ -433,7 +433,7 @@
           {
             "method": "memory.create_entities",
             "ok": true,
-            "ms": 5
+            "ms": 2
           },
           {
             "method": "memory.read_graph",
@@ -443,12 +443,12 @@
           {
             "method": "fetch.fetch",
             "ok": true,
-            "ms": 4986
+            "ms": 1702
           },
           {
             "method": "everything.echo",
             "ok": true,
-            "ms": 2
+            "ms": 1
           }
         ]
       }
@@ -460,56 +460,56 @@
       "added": "everything",
       "tools": 16,
       "flat": 7298,
-      "inlineSdk": 6118,
-      "codeMode": 2471
+      "inlineSdk": 6171,
+      "codeMode": 2581
     },
     {
       "servers": 2,
       "added": "filesystem",
       "tools": 30,
       "flat": 15508,
-      "inlineSdk": 11189,
-      "codeMode": 2471
+      "inlineSdk": 11242,
+      "codeMode": 2581
     },
     {
       "servers": 3,
       "added": "memory",
       "tools": 39,
       "flat": 20037,
-      "inlineSdk": 14735,
-      "codeMode": 2471
+      "inlineSdk": 14788,
+      "codeMode": 2581
     },
     {
       "servers": 4,
       "added": "sequential-thinking",
       "tools": 40,
       "flat": 24097,
-      "inlineSdk": 16510,
-      "codeMode": 2471
+      "inlineSdk": 16563,
+      "codeMode": 2581
     },
     {
       "servers": 5,
       "added": "time",
       "tools": 42,
       "flat": 25284,
-      "inlineSdk": 18139,
-      "codeMode": 2471
+      "inlineSdk": 18192,
+      "codeMode": 2581
     },
     {
       "servers": 6,
       "added": "git",
       "tools": 54,
       "flat": 30127,
-      "inlineSdk": 21597,
-      "codeMode": 2471
+      "inlineSdk": 21650,
+      "codeMode": 2581
     },
     {
       "servers": 7,
       "added": "fetch",
       "tools": 55,
       "flat": 31179,
-      "inlineSdk": 23002,
-      "codeMode": 2471
+      "inlineSdk": 23055,
+      "codeMode": 2581
     }
   ],
   "tasks": {
@@ -519,7 +519,7 @@
         "turns": 1,
         "resultBytes": 129977,
         "rereadBytes": 129977,
-        "ms": 24
+        "ms": 4
       },
       "codeMode": {
         "turns": 1,
@@ -527,7 +527,7 @@
         "envelopeBytes": 402,
         "answerBytes": 294,
         "upstreamCalls": 1,
-        "ms": 64
+        "ms": 28
       },
       "answer": {
         "count": 20,
@@ -544,15 +544,15 @@
         "turns": 26,
         "resultBytes": 12699,
         "rereadBytes": 172698,
-        "ms": 39
+        "ms": 11
       },
       "codeMode": {
         "turns": 1,
         "codeBytes": 666,
-        "envelopeBytes": 1826,
+        "envelopeBytes": 1822,
         "answerBytes": 39,
         "upstreamCalls": 26,
-        "ms": 26
+        "ms": 10
       },
       "answer": {
         "orders": 25,
@@ -560,5 +560,58 @@
         "total": 1906.81
       }
     }
+  },
+  "startup": {
+    "cold": [
+      {
+        "handshake": 300,
+        "search": 1816,
+        "execute": 30
+      },
+      {
+        "handshake": 299,
+        "search": 2027,
+        "execute": 35
+      },
+      {
+        "handshake": 304,
+        "search": 1742,
+        "execute": 37
+      }
+    ],
+    "warm": [
+      {
+        "handshake": 300,
+        "search": 315,
+        "execute": 36
+      },
+      {
+        "handshake": 300,
+        "search": 314,
+        "execute": 34
+      },
+      {
+        "handshake": 299,
+        "search": 313,
+        "execute": 37
+      }
+    ],
+    "lazy": [
+      {
+        "handshake": 283,
+        "search": 296,
+        "execute": 605
+      },
+      {
+        "handshake": 285,
+        "search": 297,
+        "execute": 597
+      },
+      {
+        "handshake": 281,
+        "search": 294,
+        "execute": 597
+      }
+    ]
   }
 }

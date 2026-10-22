@@ -1,4 +1,11 @@
-export { catalogFromFlatTools, catalogFromServers, failedNamespace, findServer, findTool } from "./catalog.js";
+export {
+  catalogFromFlatTools,
+  catalogFromServers,
+  failedNamespace,
+  findServer,
+  findTool,
+  namespaceWithIdent,
+} from "./catalog.js";
 export { CodeMode, type CodeModeOptions } from "./codemode.js";
 export {
   expandText,
@@ -16,7 +23,8 @@ export { describeTarget, renderSdk } from "./describe.js";
 export { wrapCode, runInSandbox } from "./sandbox.js";
 export { schemaToType } from "./schema.js";
 export { searchCatalog } from "./search.js";
-export { createCodeModeServer } from "./server.js";
+export { createCodeModeServer, type CodeModeServerOptions } from "./server.js";
+export { defaultCacheDir, fileCache, specKey, type CatalogCache } from "./cache.js";
 export { toIdent, uniqueIdent } from "./ident.js";
 export {
   DEFAULT_CONNECT_TIMEOUT_MS,
@@ -28,6 +36,7 @@ export {
   publicError,
   valueFromToolResult,
   type ConnectFailure,
+  type PoolOptions,
 } from "./upstream.js";
 export { VERSION } from "./version.js";
 export {

@@ -1,122 +1,95 @@
 # MCPtoCodeMode
 
-[Specification](SPEC.md) · [CI](https://github.com/minkaworks/mcptocodemode/actions/workflows/ci.yml) · [MIT License](LICENSE) · [Changelog](CHANGELOG.md)
+[Specification](SPEC.md) · [Benchmarks](REPORT.md) · [CI](https://github.com/minkaworks/mcptocodemode/actions/workflows/ci.yml) · [MIT License](LICENSE) · [Changelog](CHANGELOG.md)
 
-One MCP server in front of every MCP server you already run. The model sees three tools: `search`, `describe`, and `execute`. It writes JavaScript. The code calls the real servers from a sandbox that has no network and no credentials.
-
-MCP is the standard, so this server does not special-case any product. A stdio process, a streamable HTTP endpoint, and a legacy SSE endpoint all show up the same way: tools, resources, and prompts. The contract is [SPEC.md](SPEC.md). The idea of letting the model write code against those tools comes from [Cloudflare Code Mode](https://blog.cloudflare.com/code-mode/). The wire interface here is MCP, so any MCP client can host it.
-
-A client that forwards every upstream tool can put a couple of hundred tools in the prompt. This server keeps that count at 3, however many servers connect later.
+One MCP server in front of all the MCP servers you already use. Your model sees three tools instead of hundreds, and it writes one short program instead of making dozens of tool calls.
 
 ```bash
 npx -y mcptocodemode list
 ```
 
-That reads the MCP configs already on this machine, connects to each server, and prints the namespaces the code will see. Register it with a client in place of those servers:
+That finds the MCP servers already configured on your machine (Claude, Codex, Cursor, VS Code, Grok), connects to them, and prints what the model will be able to call.
+
+## Why
+
+Connect seven MCP servers and your client puts 55 tool definitions in every prompt. Then ask it something like *"read these 25 order files and total the paid ones"*. That is 26 tool calls and 26 model turns, and each turn re-reads every file that came before it.
+
+With MCPtoCodeMode the model writes this once, and only the answer comes back:
+
+```js
+const listing = await filesystem.list_directory({ path: "/data/orders" });
+const names = listing.content.split("\n").map((line) => line.replace("[FILE] ", ""));
+const orders = await Promise.all(
+  names.map(async (name) => JSON.parse((await filesystem.read_text_file({ path: `/data/orders/${name}` })).content)),
+);
+const paid = orders.filter((order) => order.status === "paid");
+return { paid: paid.length, total: paid.reduce((sum, order) => sum + order.total, 0) };
+```
+
+The code runs in a sandbox with no network, no filesystem, and no credentials. Its only way out is the MCP servers you configured.
+
+## Benchmarks
+
+Seven official [reference servers](https://github.com/modelcontextprotocol/servers), 55 tools, measured with `pnpm measure`. Method, raw data, and caveats are in [REPORT.md](REPORT.md).
+
+| | Plain MCP | MCPtoCodeMode |
+| --- | ---: | ---: |
+| Tool definitions in every prompt | 31,179 bytes | **2,581 bytes** |
+| Count errors in a 2,000-line log: bytes back to the model | 129,977 | **402** |
+| Total 25 order files: model turns | 26 | **1** |
+| Total 25 order files: context re-read across turns | 172,698 bytes | **1,822 bytes** |
+| Startup: first `search` answered, tools cached | 1,697 ms (v0.1.1) | **314 ms** |
+
+The 2,581 bytes stay the same however many servers you add. MCPtoCodeMode does not make the servers themselves faster. It cuts what goes into the prompt and the turns between calls. No model was in the loop for these numbers.
+
+## Use it
+
+Claude Code:
 
 ```bash
 claude mcp add codemode -- npx -y mcptocodemode serve
 ```
 
-Discovery reads the same client configs that list `codemode`. The copy it would launch notices it is nested and exits, so that entry is skipped. The other servers load.
-
-## Numbers
-
-Seven official reference servers, 55 tools. No model in the loop. Full method and raw data in [REPORT.md](REPORT.md).
-
-| | Flat MCP | Code Mode |
-| --- | ---: | ---: |
-| Tool definitions in the prompt | 31,179 bytes | 2,471 bytes |
-| Count errors in a 2,000-line log: bytes back | 129,977 | 402 |
-| Total 25 order files: turns | 26 | 1 |
-| Total 25 order files: context re-read across turns | 172,698 bytes | 1,826 bytes |
-| Eight small calls: median wall clock | 2,529 ms | 2,726 ms |
-
-The prompt figure stays at 2,471 bytes as servers are added. Code Mode does not make upstream calls faster. It saves the bytes and the turns between them.
-
-## Develop
-
-```bash
-pnpm install
-pnpm test
-pnpm build
-node dist/cli.js serve --config mcptocodemode.config.example.json
-```
-
-`mcptocodemode.reference.example.json` points at the official servers in [modelcontextprotocol/servers](https://github.com/modelcontextprotocol/servers): everything, filesystem, memory, sequential thinking, time, git, and fetch. They are published from that repository and need no API key. Set `CODEMODE_FS_ROOT` to a directory the filesystem server may touch, `CODEMODE_MEMORY_FILE` to a `.jsonl` path, and `CODEMODE_GIT_REPO` to a repository. Fetch refuses private addresses unless you add `--allow-private-ips`. Git can change that repository when the code calls `git_add` or `git_commit`.
-
-[REPORT.md](REPORT.md) compares flat MCP, an inline SDK, and progressive Code Mode on those seven servers. `pnpm measure` repeats the run.
-
-With no `--config`, `serve` reads the MCP configs already on the machine. It does not contact a registry and it does not invent servers. It looks at, in order:
-
-- `~/.codex/config.toml`, Claude Desktop, `~/.claude.json` (user servers, then the ones Claude Code stores for this project), `~/.cursor/mcp.json`, `~/.grok/config.toml`
-- from the git root down to the working directory: `.mcp.json`, `mcp.json`, `.cursor/mcp.json`, `.vscode/mcp.json`, `.grok/config.toml`
-- `./mcptocodemode.config.json`
-
-A later file replaces an earlier server with the same name. Pass `--config` one or more times to use only those files. `CODEMODE_CONFIG` is a single file when `--config` is absent.
-
-Accepted files:
-
-- this project's `{ "servers": [ { "name", "command" | "url" } ] }`
-- standard `{ "mcpServers": { "name": { "command" | "url", "type": "stdio" | "http" | "sse" } } }`
-- VS Code `{ "servers": { "name": { ... } } }`
-- Grok and Codex `[mcp_servers.name]` TOML
-
-`type` may be `stdio`, `http`, `streamable-http`, or `sse`. A URL with no type uses streamable HTTP. `enabled = false` and `disabled_mcp_servers` skip a server. `${VAR}` and `${VAR:-default}` expand from the environment of this process.
+Any other MCP client:
 
 ```json
 {
   "mcpServers": {
-    "filesystem": {
-      "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-filesystem", "/Users/you/notes"]
-    },
-    "docs": {
-      "type": "sse",
-      "url": "https://example.com/sse",
-      "headers": { "Authorization": "Bearer ${DOCS_TOKEN}" }
-    }
+    "codemode": { "command": "npx", "args": ["-y", "mcptocodemode", "serve"] }
   }
 }
 ```
 
-`${VAR}` expands from the environment of this process. A name that is unset stays as written. Do not commit secrets.
+You can leave your other servers configured. MCPtoCodeMode reads those same configs and skips its own entry. Remove the other servers from the client if you want the model to see only the three tools.
 
-Servers connect in parallel. One that fails, or does not answer within 60 seconds, is reported on stderr and skipped. The others still load. Search lists the failure. Restart to pick up tools added after connect.
+## How it works
 
-Grok, or any other MCP client:
+The model gets three tools:
 
-```toml
-[mcp_servers.codemode]
-command = "node"
-args = ["/absolute/path/to/mcptocodemode/dist/cli.js", "serve", "--config", "/absolute/path/to/mcptocodemode.config.json"]
-```
+- **`search`** finds methods by keyword. The top hits include their TypeScript signature.
+- **`describe`** returns the full signature of a server (`"notes"`) or one method (`"notes.get"`).
+- **`execute`** runs JavaScript. Each server is a global: `await notes.get({ id: "1" })`. Only the return value comes back, plus `console.log` output and a list of which methods ran.
 
-`node dist/cli.js list` prints each namespace. `node dist/cli.js sdk --out api.d.ts` writes the TypeScript the sandbox implements. `node dist/cli.js demo-upstream` is a tiny notes server with a tool, a resource, and a prompt.
+Every server also has `resources.list`, `resources.read`, `resources.templates`, `prompts.list`, and `prompts.get`. Inside `execute`, `codemode.search` and `codemode.describe` work too. The full contract is [SPEC.md](SPEC.md).
 
-## What the model does
+## Configuration
 
-`search` returns a few matches and the list of servers. It does not return schemas. An empty query still lists the servers.
+With no flags, `serve` reads the MCP configs on your machine, in this order. A later server with the same name wins.
 
-`describe` with `"notes.get"` returns that signature. `"notes.resources.read"` and `"notes.prompts.get"` describe the protocol methods. The first dot separates the server from the rest.
+- `~/.codex/config.toml`, Claude Desktop, `~/.claude.json` (including the servers Claude Code stores for this project), `~/.cursor/mcp.json`, `~/.grok/config.toml`
+- from the git root down to the current directory: `.mcp.json`, `mcp.json`, `.cursor/mcp.json`, `.vscode/mcp.json`, `.grok/config.toml`
+- `./mcptocodemode.config.json`
 
-`execute` runs code like this:
+It accepts standard `mcpServers` JSON, VS Code `servers` JSON, and Codex or Grok `[mcp_servers.name]` TOML, over stdio, streamable HTTP, or SSE. `${VAR}` and `${VAR:-default}` expand from the environment.
 
-```js
-const rows = await notes.list();
-const full = [];
-for (const row of rows) {
-  full.push(await notes.get({ id: row.id }));
-}
-const memo = await notes.resources.read({ uri: "note://1" });
-return { titles: full.map((note) => note.title), memo };
-```
+| Option | Effect |
+| --- | --- |
+| `--config file` | Use only these files. Repeatable. `CODEMODE_CONFIG` sets one. |
+| `--lazy` | Don't launch a cached server until code calls it. |
+| `--no-cache` | Don't read or write the tool cache. Same as `CODEMODE_CACHE=0`. |
+| `CODEMODE_CACHE_DIR` | Where tool lists are cached. Default `~/.cache/mcptocodemode`. |
 
-Every connected server has `resources.list`, `resources.read`, `resources.templates`, `prompts.list`, and `prompts.get`. They call the MCP resources and prompts methods. A server that does not implement them returns that server's error when the code calls them. Nothing is probed at connect.
-
-Only the return value comes back. `console.log` is collected into `logs`. `calls` says which methods ran, not what they were given.
-
-Inside the sandbox, `codemode.search` and `codemode.describe` do the same work, so a single `execute` can look a method up and call it.
+Servers connect in parallel. One that fails, or doesn't answer within 60 seconds, is skipped and the rest load. Tool lists are cached after each connect, so the next start answers at once and the servers connect in the background. A cache entry is keyed by a hash of the server config, and credentials are never written. `mcptocodemode list` refreshes the cache. `mcptocodemode sdk --out api.d.ts` writes the TypeScript the sandbox implements.
 
 ## Library
 
@@ -124,30 +97,23 @@ Inside the sandbox, `codemode.search` and `codemode.describe` do the same work, 
 import { catalogFromServers, CodeMode } from "mcptocodemode";
 
 const catalog = catalogFromServers([
-  {
-    name: "notes",
-    tools: [{ name: "get", description: "Read one note.", inputSchema: { type: "object", properties: { id: { type: "string" } }, required: ["id"] } }],
-  },
+  { name: "notes", tools: [{ name: "get", inputSchema: { type: "object", properties: { id: { type: "string" } } } }] },
 ]);
-
-const mode = new CodeMode(catalog, async (call) => {
-  // call.server, call.method, call.tool, call.input
-  return { id: "1", title: "Buy milk" };
-});
+const mode = new CodeMode(catalog, async (call) => ({ id: call.input.id, title: "Buy milk" }));
 
 await mode.execute(`return await notes.get({ id: "1" });`);
 ```
 
-`beforeCall` can reject a method before the dispatcher runs. `createCodeModeServer(mode)` is the MCP adapter. `parseConfig` and `discoverConfig` read the standard files. `UpstreamPool.connect` speaks stdio, streamable HTTP, and SSE.
+`beforeCall` can refuse a method before it runs. `createCodeModeServer(mode)` turns it into an MCP server, and `UpstreamPool` connects to real servers.
 
-## Limits
+## Limits and safety
 
-The sandbox is [QuickJS](https://github.com/quickjs-ng/quickjs) compiled to WebAssembly, one context per `execute`. Defaults: 30 seconds, 100 tool calls, 64 MiB, 100,000 characters of code. Tool results over 200,000 characters of JSON come back as `{ truncated: true, bytes, preview }`. Image and audio blocks are not copied in. Resource blobs are not copied in either.
+Each `execute` gets a fresh [QuickJS](https://github.com/quickjs-ng/quickjs) WebAssembly sandbox: 30 seconds, 100 tool calls, 64 MiB, and 100,000 characters of code. Tool results over 200,000 characters come back truncated. Images, audio, and binary resources are not copied in.
 
-These are process limits, not a substitute for upstream authorization. A tool that sends a message still sends it when the code calls it. Deny that method in `beforeCall` when a human has to approve it.
+The sandbox limits what the code can reach. It does not limit what a tool does: a tool that sends an email still sends it. Use `beforeCall` to block methods that need a human.
 
-## Repository
+## Contributing
 
-Setup, tests, and the license for a contribution are in [CONTRIBUTING.md](CONTRIBUTING.md). Conduct is in [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md). Questions are in [SUPPORT.md](SUPPORT.md). Vulnerabilities go through [SECURITY.md](SECURITY.md).
+Setup and tests: [CONTRIBUTING.md](CONTRIBUTING.md). Questions: [SUPPORT.md](SUPPORT.md). Vulnerabilities: [SECURITY.md](SECURITY.md). Conduct: [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md). This repository follows and defines the [minkaworks repository standard](STANDARD.md).
 
-This repository defines the [minkaworks repository standard](STANDARD.md). Later repositories link to that file.
+The idea comes from [Cloudflare Code Mode](https://blog.cloudflare.com/code-mode/). This project speaks plain MCP, so any MCP client can use it.

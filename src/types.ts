@@ -76,6 +76,8 @@ export type SearchHit = {
   description: string;
   required: string[];
   score: number;
+  /** TypeScript call signature. Present on the top matches when it is short. */
+  signature?: string;
 };
 
 export type Limits = {

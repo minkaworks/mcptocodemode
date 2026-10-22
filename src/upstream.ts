@@ -3,7 +3,9 @@ import { SSEClientTransport } from "@modelcontextprotocol/sdk/client/sse.js";
 import { getDefaultEnvironment, StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import type { Transport } from "@modelcontextprotocol/sdk/shared/transport.js";
-import { catalogFromServers, failedNamespace, findServer } from "./catalog.js";
+import type { CatalogCache } from "./cache.js";
+import { findServer, namespaceWithIdent } from "./catalog.js";
+import { uniqueIdent } from "./ident.js";
 import type { ServerSpec } from "./config.js";
 import type { Catalog, JsonSchema, ListedTool, ToolCall } from "./types.js";
 import { VERSION } from "./version.js";
@@ -30,9 +32,39 @@ type Session = {
   tools: ListedTool[];
 };
 
+/** One configured server. `session` is set once a connect starts and is reused after that. */
+type Entry = {
+  spec: ServerSpec;
+  ident: string;
+  index: number;
+  session?: Promise<Session>;
+  client?: Client;
+};
+
 export type ConnectFailure = {
   name: string;
   message: string;
+};
+
+export type PoolOptions = {
+  /** How long one server may take to answer the handshake and the tool list. */
+  timeoutMs?: number;
+  env?: NodeJS.ProcessEnv;
+  /** Tool lists from earlier runs. `start` reads it; every successful connect writes it. */
+  cache?: CatalogCache;
+  /**
+   * When true, a server with a cached tool list is not launched until code
+   * calls it. When false, every server connects now and the cache is not read.
+   */
+  lazy?: boolean;
+  /**
+   * With `lazy`, also connect cached servers in the background without
+   * holding up `ready`. The model's first turn usually hides the launch.
+   * False leaves a cached server unlaunched until code calls it.
+   */
+  prewarm?: boolean;
+  /** Called for each connect failure, including one that happens on a first call. */
+  onFailure?: (failure: ConnectFailure) => void;
 };
 
 /**
@@ -46,44 +78,79 @@ export const DEFAULT_CONNECT_TIMEOUT_MS = 60_000;
 const PROTOCOL = new Set(["resources.list", "resources.read", "resources.templates", "prompts.list", "prompts.get"]);
 
 export class UpstreamPool {
+  /** Shared with the sandbox. A namespace is replaced in place when its server connects. */
   readonly catalog: Catalog;
-  readonly failures: ConnectFailure[];
+  /** Settles when every server that had to connect at start has connected or failed. It never rejects. */
+  readonly ready: Promise<void>;
+  private readonly entries: Entry[];
+  private readonly timeoutMs: number;
+  private readonly depth: number;
+  private readonly cache?: CatalogCache;
+  private readonly onFailure?: (failure: ConnectFailure) => void;
+  private closed = false;
 
-  private constructor(private readonly sessions: Session[], failures: ConnectFailure[]) {
-    this.failures = failures;
-    const groups = sessions.map((session) => ({ name: session.spec.name, tools: session.tools }));
-    const catalog = catalogFromServers(groups);
-    const used = new Set(catalog.servers.map((server) => server.ident));
-    catalog.servers.push(...failures.map((failure) => failedNamespace(failure.name, failure.message, used)));
-    this.catalog = catalog;
+  private constructor(specs: ServerSpec[], options: PoolOptions) {
+    this.timeoutMs = options.timeoutMs ?? DEFAULT_CONNECT_TIMEOUT_MS;
+    this.depth = nestingDepth(options.env ?? process.env) + 1;
+    this.cache = options.cache;
+    this.onFailure = options.onFailure;
+    const used = new Set<string>();
+    this.entries = specs.map((spec, index) => ({ spec, ident: uniqueIdent(spec.name, used), index }));
+    this.catalog = { servers: this.entries.map((entry) => ({ name: entry.spec.name, ident: entry.ident, tools: [] })) };
+
+    const now: Array<Promise<unknown>> = [];
+    for (const entry of this.entries) {
+      const cached = options.lazy ? this.cache?.read(entry.spec) : undefined;
+      if (!cached) {
+        now.push(this.open(entry).catch(() => undefined));
+        continue;
+      }
+      this.catalog.servers[entry.index] = namespaceWithIdent(entry.spec.name, entry.ident, cached);
+      if (options.prewarm) void this.open(entry).catch(() => undefined);
+    }
+    this.ready = Promise.all(now).then(() => undefined);
+  }
+
+  /**
+   * Answer at once. Servers with a cached tool list are usable right away and
+   * connect in the background (or on first call without `prewarm`). The rest
+   * connect now, and `ready` settles when they are done.
+   */
+  static start(specs: ServerSpec[], options: PoolOptions = {}): UpstreamPool {
+    return new UpstreamPool(specs, { lazy: true, prewarm: true, ...options });
   }
 
   /**
    * Connect every server at once. One failure, or one server that does not
    * answer within `timeoutMs`, is recorded and the rest continue.
    */
-  static async connect(
-    specs: ServerSpec[],
-    options: { timeoutMs?: number; env?: NodeJS.ProcessEnv } = {},
-  ): Promise<UpstreamPool> {
-    const timeoutMs = options.timeoutMs ?? DEFAULT_CONNECT_TIMEOUT_MS;
-    const depth = nestingDepth(options.env ?? process.env) + 1;
-    const settled = await Promise.allSettled(specs.map((spec) => connectOne(spec, timeoutMs, depth)));
-    const sessions: Session[] = [];
-    const failures: ConnectFailure[] = [];
-    settled.forEach((outcome, index) => {
-      if (outcome.status === "fulfilled") sessions.push(outcome.value);
-      else failures.push({ name: specs[index]?.name ?? "unknown", message: publicError(outcome.reason) });
-    });
-    return new UpstreamPool(sessions, failures);
+  static async connect(specs: ServerSpec[], options: PoolOptions = {}): Promise<UpstreamPool> {
+    const pool = new UpstreamPool(specs, { ...options, lazy: false });
+    await pool.ready;
+    return pool;
+  }
+
+  /** Servers that failed to connect so far, in config order. */
+  get failures(): ConnectFailure[] {
+    return this.catalog.servers.flatMap((server) => (server.error ? [{ name: server.name, message: server.error }] : []));
+  }
+
+  /** Names of the servers with a live connection. */
+  get connected(): string[] {
+    return this.entries.filter((entry) => entry.client).map((entry) => entry.spec.name);
   }
 
   async call(call: ToolCall, maxResultChars: number): Promise<unknown> {
     const namespace = findServer(this.catalog, call.server);
-    if (!namespace) throw new Error(`No upstream server named "${call.server}"`);
+    const entry = this.entries.find((item) => item.ident === namespace?.ident);
+    if (!namespace || !entry) throw new Error(`No upstream server named "${call.server}"`);
     if (namespace.error) throw new Error(`${namespace.ident} did not connect: ${namespace.error}`);
-    const session = this.sessions.find((item) => item.spec.name === namespace.name);
-    if (!session) throw new Error(`No upstream server named "${call.server}"`);
+    let session: Session;
+    try {
+      session = await this.open(entry);
+    } catch (error) {
+      throw new Error(`${namespace.ident} did not connect: ${publicError(error)}`);
+    }
     if (PROTOCOL.has(call.method)) return callProtocol(session.client, call, maxResultChars);
     const tool = session.tools.find((item) => item.name === call.tool);
     if (!tool) throw new Error(`${namespace.ident} has no tool "${call.tool}"`);
@@ -91,7 +158,31 @@ export class UpstreamPool {
   }
 
   async close(): Promise<void> {
-    await Promise.all(this.sessions.map((session) => session.client.close().catch(() => undefined)));
+    this.closed = true;
+    await Promise.all(this.entries.map((entry) => entry.client?.close().catch(() => undefined)));
+  }
+
+  /** Connect once. Later calls share the same attempt, successful or not. */
+  private open(entry: Entry): Promise<Session> {
+    entry.session ??= connectOne(entry.spec, this.timeoutMs, this.depth).then(
+      async (session) => {
+        if (this.closed) {
+          await session.client.close().catch(() => undefined);
+          throw new Error("pool closed");
+        }
+        entry.client = session.client;
+        this.catalog.servers[entry.index] = namespaceWithIdent(entry.spec.name, entry.ident, session.tools);
+        this.cache?.write(entry.spec, session.tools);
+        return session;
+      },
+      (error: unknown) => {
+        const failure = { name: entry.spec.name, message: publicError(error) };
+        this.catalog.servers[entry.index] = { name: entry.spec.name, ident: entry.ident, tools: [], error: failure.message };
+        this.onFailure?.(failure);
+        throw error;
+      },
+    );
+    return entry.session;
   }
 }
 

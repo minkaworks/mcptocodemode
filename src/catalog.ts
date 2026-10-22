@@ -66,7 +66,11 @@ function protocolRecords(serverName: string, ident: string): ToolRecord[] {
 }
 
 export function namespaceFromTools(serverName: string, tools: ListedTool[], usedServerIdents: Set<string>): ServerNamespace {
-  const ident = uniqueIdent(serverName, usedServerIdents);
+  return namespaceWithIdent(serverName, uniqueIdent(serverName, usedServerIdents), tools);
+}
+
+/** Build a namespace under an ident the caller already reserved. */
+export function namespaceWithIdent(serverName: string, ident: string, tools: ListedTool[]): ServerNamespace {
   // `resources` and `prompts` are nested protocol objects on every server.
   const usedMethods = new Set<string>(["resources", "prompts"]);
   const records: ToolRecord[] = tools.map((tool) => ({

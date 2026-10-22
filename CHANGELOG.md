@@ -6,6 +6,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-10-22
+
+### Added
+
+- `serve` caches each server's tool list. On the next start a cached server is searchable and describable at once and connects in the background. `--lazy` waits for the first call instead, and `--no-cache` or `CODEMODE_CACHE=0` turns the cache off. `mcptocodemode list` refreshes it.
+- The top three `search` hits carry their TypeScript signature, so `execute` can often follow without a `describe`.
+- `UpstreamPool.start`, `fileCache`, and `defaultCacheDir` for library users. `createCodeModeServer` takes a `ready` promise.
+- [REPORT.md](REPORT.md) measures startup the way an MCP client sees it.
+
+### Changed
+
+- `serve` answers the MCP handshake before the servers have connected. `search`, `describe`, and `execute` wait for the servers that have no cached tool list.
+- The `execute` description tells the model that independent calls run concurrently with `Promise.all`.
+- The README leads with the use case, the benchmarks, and the one-line setup.
+
 ## [0.1.1] - 2026-10-22
 
 ### Fixed
@@ -39,6 +54,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - A reference config for the official servers in [modelcontextprotocol/servers](https://github.com/modelcontextprotocol/servers).
 - [REPORT.md](REPORT.md) and `pnpm measure`, comparing flat MCP, an inline SDK, and progressive Code Mode.
 
-[Unreleased]: https://github.com/minkaworks/mcptocodemode/compare/v0.1.1...HEAD
+[Unreleased]: https://github.com/minkaworks/mcptocodemode/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/minkaworks/mcptocodemode/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/minkaworks/mcptocodemode/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/minkaworks/mcptocodemode/releases/tag/v0.1.0

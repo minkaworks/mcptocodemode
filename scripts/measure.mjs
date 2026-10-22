@@ -1,8 +1,10 @@
 import { execSync } from "node:child_process";
-import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
+import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { CodeMode, createCodeModeServer, loadConfig, UpstreamPool } from "../dist/index.js";
 
@@ -23,6 +25,7 @@ const runs = 3;
 const pageUrl = "https://github.com/modelcontextprotocol/servers";
 
 prepareFixtures();
+const startup = await measureStartup();
 
 const config = await loadConfig(path.join(root, "mcptocodemode.reference.example.json"));
 process.stderr.write("connecting\n");
@@ -47,6 +50,7 @@ try {
     task: { direct: [], code: [] },
     scaling: [],
     tasks: {},
+    startup,
   };
 
   report.prompt.flat = toolBytes(flatTools(pool.catalog));
@@ -102,6 +106,53 @@ try {
   process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);
 } finally {
   await pool.close();
+}
+
+/**
+ * Launch `serve` the way an MCP client does. Time the handshake and the first
+ * search from launch, then wait two seconds for a model turn and time the
+ * first execute that calls `time` on its own. Cold starts with an empty tool
+ * cache, warm reuses what cold wrote, lazy is warm with `--lazy`. Launches are
+ * spaced out so one run's upstream processes have exited before the next.
+ */
+async function measureStartup() {
+  const cacheDir = mkdtempSync(path.join(os.tmpdir(), "mcptocodemode-cache-"));
+  const rows = { cold: [], warm: [], lazy: [] };
+  await launch(cacheDir);
+  for (let i = 0; i < runs; i += 1) {
+    process.stderr.write(`startup ${i + 1}\n`);
+    rows.cold.push(await launch(mkdtempSync(path.join(os.tmpdir(), "mcptocodemode-cache-"))));
+    rows.warm.push(await launch(cacheDir));
+    rows.lazy.push(await launch(cacheDir, ["--lazy"]));
+  }
+  return rows;
+}
+
+async function launch(cacheDir, extra = []) {
+  await new Promise((resolve) => setTimeout(resolve, 4_000));
+  const started = performance.now();
+  const client = new Client({ name: "measure", version: "0" });
+  await client.connect(
+    new StdioClientTransport({
+      command: process.execPath,
+      args: [path.join(root, "dist", "cli.js"), "serve", "--config", path.join(root, "mcptocodemode.reference.example.json"), ...extra],
+      env: { ...process.env, CODEMODE_CACHE_DIR: cacheDir },
+      stderr: "ignore",
+    }),
+  );
+  const handshake = elapsed(started);
+  await client.callTool({ name: "search", arguments: { query: "time" } });
+  const search = elapsed(started);
+  await new Promise((resolve) => setTimeout(resolve, 2_000));
+  const executeStarted = performance.now();
+  const result = await client.callTool({
+    name: "execute",
+    arguments: { code: `return (await time.get_current_time({ timezone: "UTC" })).timezone;` },
+  });
+  const execute = elapsed(executeStarted);
+  if (!result.structuredContent?.ok) throw new Error(`startup execute failed: ${JSON.stringify(result.structuredContent)}`);
+  await client.close();
+  return { handshake, search, execute };
 }
 
 function prepareFixtures() {

@@ -3,6 +3,7 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { writeFile } from "node:fs/promises";
+import { defaultCacheDir, fileCache } from "./cache.js";
 import { CodeMode } from "./codemode.js";
 import { loadConfigs } from "./config.js";
 import { discoverConfig } from "./discover.js";
@@ -22,7 +23,7 @@ if (command === "demo-upstream") {
 } else {
   process.stderr.write(
     [
-      "mcptocodemode serve [--config file ...]",
+      "mcptocodemode serve [--config file ...] [--no-cache] [--lazy]",
       "mcptocodemode sdk [--config file ...] [--out api.d.ts]",
       "mcptocodemode list [--config file ...]",
       "mcptocodemode demo-upstream",
@@ -30,6 +31,9 @@ if (command === "demo-upstream") {
       "A config file is this project's JSON, standard mcpServers JSON, or [mcp_servers.*] TOML.",
       "With no --config, serve reads the MCP configs already on this machine.",
       "One upstream that fails to connect is reported and skipped.",
+      "serve answers at once. Servers whose tools are cached connect in the background.",
+      "--lazy leaves a cached server unlaunched until code calls it.",
+      "list connects to every server and refreshes the cache.",
       "",
     ].join("\n"),
   );
@@ -51,7 +55,11 @@ function flags(name: string): string[] {
   return values;
 }
 
-async function openPool(): Promise<{ pool: UpstreamPool; mode: CodeMode }> {
+/**
+ * `serve` and `sdk` read the tool cache, so cached servers are not launched
+ * up front. `list` connects to every server and rewrites the cache.
+ */
+async function openPool(kind: "serve" | "sdk" | "list"): Promise<{ pool: UpstreamPool; mode: CodeMode }> {
   const configPaths = flags("--config");
   const fromEnv = process.env.CODEMODE_CONFIG;
   if (configPaths.length === 0 && fromEnv) configPaths.push(fromEnv);
@@ -77,16 +85,25 @@ async function openPool(): Promise<{ pool: UpstreamPool; mode: CodeMode }> {
     limits = config.limits;
   }
 
-  const pool = await UpstreamPool.connect(servers);
-  for (const failure of pool.failures) {
-    process.stderr.write(`mcptocodemode: ${failure.name} did not connect: ${failure.message}\n`);
-  }
-  const connected = pool.catalog.servers.filter((server) => !server.error);
-  const toolCount = connected.reduce(
-    (sum, server) => sum + server.tools.filter((tool) => tool.kind !== "protocol").length,
-    0,
-  );
-  process.stderr.write(`mcptocodemode: ${connected.length} connected, ${toolCount} tools\n`);
+  const useCache = !process.argv.includes("--no-cache") && process.env.CODEMODE_CACHE !== "0";
+  const options = {
+    cache: useCache ? fileCache(defaultCacheDir()) : undefined,
+    prewarm: kind === "serve" && !process.argv.includes("--lazy"),
+    onFailure: (failure: { name: string; message: string }) => {
+      process.stderr.write(`mcptocodemode: ${failure.name} did not connect: ${failure.message}\n`);
+    },
+  };
+  const pool = kind === "list" ? await UpstreamPool.connect(servers, options) : UpstreamPool.start(servers, options);
+  void pool.ready.then(() => {
+    const usable = pool.catalog.servers.filter((server) => !server.error);
+    const toolCount = usable.reduce(
+      (sum, server) => sum + server.tools.filter((tool) => tool.kind !== "protocol").length,
+      0,
+    );
+    const waiting = usable.length - pool.connected.length;
+    const cached = waiting > 0 ? `, ${waiting} from cache` : "";
+    process.stderr.write(`mcptocodemode: ${pool.connected.length} connected${cached}, ${toolCount} tools\n`);
+  });
   const mode = new CodeMode(pool.catalog, (call) => pool.call(call, limits.maxResultChars), { limits });
   return { pool, mode };
 }
@@ -100,8 +117,8 @@ async function serve(): Promise<void> {
     );
     process.exit(1);
   }
-  const { pool, mode } = await openPool();
-  const server = createCodeModeServer(mode);
+  const { pool, mode } = await openPool("serve");
+  const server = createCodeModeServer(mode, { ready: pool.ready });
   const transport = new StdioServerTransport();
   const shutdown = async () => {
     await pool.close();
@@ -117,8 +134,9 @@ async function serve(): Promise<void> {
 }
 
 async function inspect(kind: "sdk" | "list"): Promise<void> {
-  const { pool, mode } = await openPool();
+  const { pool, mode } = await openPool(kind);
   try {
+    await pool.ready;
     if (kind === "list") {
       for (const server of mode.catalog.servers) {
         if (server.error) {

@@ -45,13 +45,14 @@ The result is JSON:
       "tool": "get",
       "description": "Read one note by id.",
       "required": ["id"],
-      "score": 12
+      "score": 12,
+      "signature": "notes.get(input: {\n    id: string;\n  }): Promise<unknown>"
     }
   ]
 }
 ```
 
-Hits do not include JSON Schemas. `servers` is the full list of configured namespaces, including a server that failed to connect. A failed server has `toolCount: 0` and an `error` string. That string must not contain credentials.
+Hits do not include JSON Schemas. The first three hits of a non-empty query carry `signature`, the TypeScript call signature `describe` would return without its doc comment, when it is at most 1,200 characters. A model can often go from `search` to `execute` without a `describe` in between. An empty query returns no signatures. `servers` is the full list of configured namespaces, including a server that failed to connect. A failed server has `toolCount: 0` and an `error` string. That string must not contain credentials.
 
 `toolCount` counts upstream tools. It does not count the protocol methods below. An empty query still returns `servers`, plus a sample of tools. The sample omits protocol methods. A query that names resources or prompts can return those methods.
 
@@ -154,9 +155,13 @@ A server is configured as a stdio command or a URL. The URL transport is streama
 
 The host reads servers from the caller's config. It accepts `{ servers: [...] }`, standard `{ mcpServers: { ... } }`, a `servers` object map, and `[mcp_servers.name]` TOML. `enabled: false` skips a server. Servers from later files replace earlier servers with the same name.
 
-Connecting is per server. One failed handshake does not drop the others. The failure is visible from `search` and from `describe`.
+Connecting is per server. One failed handshake does not drop the others. The failure is visible from `search` and from `describe`. A host may give up on a server that does not answer in time. That counts as a failed handshake.
 
-Restart the server to pick up tools, resources, or prompts added after connect. The catalog is fixed at process start.
+A host may keep each server's tool list from an earlier connect and serve the catalog from it. Such a server can be searched, described, and bound in the sandbox before it connects. It connects in the background or on its first call. When it connects, its live tool list replaces the kept one for later runs, and a call to a tool it no longer has fails with the server's own answer. A server that fails on that connect is reported like a failed handshake. A kept list is keyed by everything in the server's config, credentials included, and the credentials themselves are not stored.
+
+The host answers the MCP handshake before every server has connected. `search`, `describe`, and `execute` wait until each server without a kept list has connected or failed.
+
+Restart the server to pick up tools, resources, or prompts that appear later on a server that is already connected.
 
 ## Names
 

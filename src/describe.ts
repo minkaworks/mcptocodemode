@@ -18,6 +18,12 @@ function signature(name: string, tool: ToolRecord, docChars: number): string {
   return `${header}${name}(input${optional}: ${input.type}): Promise<unknown>;`;
 }
 
+/** One-line-per-property call signature without the doc header, for search hits. */
+export function compactSignature(server: ServerNamespace, tool: ToolRecord): string {
+  const input = inputType(tool.inputSchema, { docChars: 80 });
+  return `${server.ident}.${tool.method}(input${input.optional ? "?" : ""}: ${input.type}): Promise<unknown>`;
+}
+
 function renderMethod(server: ServerNamespace, tool: ToolRecord, docChars: number): string {
   return signature(`${server.ident}.${tool.method}`, tool, docChars);
 }

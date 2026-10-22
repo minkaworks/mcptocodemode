@@ -1,6 +1,6 @@
 {
   "name": "mcptocodemode",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "Turn any set of MCP servers into one Code Mode server: search, describe, execute.",
   "author": "dqniel",
   "keywords": [

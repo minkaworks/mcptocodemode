@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { catalogFromFlatTools } from "../src/catalog.js";
+import { catalogFromFlatTools, catalogFromServers } from "../src/catalog.js";
 import { describeTarget } from "../src/describe.js";
 import { searchCatalog } from "../src/search.js";
 
@@ -53,5 +53,21 @@ describe("search and describe", () => {
   it("describes a sanitized cursor method", () => {
     const typescript = describeTarget(catalog, "cursor.user_Trello_trelloReadCard");
     expect(typescript).toContain("cardId: string");
+  });
+
+  it("inlines the signature of the top matches but not of an empty sample", () => {
+    const catalog = catalogFromServers([
+      {
+        name: "notes",
+        tools: [
+          { name: "get", description: "Read one note.", inputSchema: { type: "object", required: ["id"], properties: { id: { type: "string" } } } },
+          { name: "list", description: "List notes.", inputSchema: { type: "object", properties: {} } },
+        ],
+      },
+    ]);
+    const found = searchCatalog(catalog, "get one note");
+    expect(found.hits[0]?.signature).toContain("notes.get(input: {");
+    expect(found.hits[0]?.signature).toContain("id: string;");
+    expect(searchCatalog(catalog, "").hits.every((hit) => hit.signature === undefined)).toBe(true);
   });
 });

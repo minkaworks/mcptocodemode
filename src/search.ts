@@ -1,4 +1,5 @@
 import { findServer } from "./catalog.js";
+import { compactSignature } from "./describe.js";
 import type { Catalog, SearchHit, ToolRecord, ServerNamespace } from "./types.js";
 
 const STOP = new Set([
@@ -19,6 +20,10 @@ const STOP = new Set([
   "it",
   "at",
 ]);
+
+/** Hits that carry a signature, and the longest signature worth inlining. */
+const SIGNED_HITS = 3;
+const MAX_SIGNATURE_CHARS = 1_200;
 
 function tokens(text: string): string[] {
   return text
@@ -75,7 +80,7 @@ export function searchCatalog(
   }
 
   const queryTokens = tokens(query);
-  const hits: SearchHit[] = [];
+  const hits: Array<SearchHit & { record: ToolRecord; namespace: ServerNamespace }> = [];
   for (const server of pool) {
     for (const tool of server.tools) {
       if (queryTokens.length === 0 && tool.kind === "protocol") continue;
@@ -88,10 +93,21 @@ export function searchCatalog(
         description: oneLine(tool.description),
         required: tool.inputSchema.required ?? [],
         score,
+        record: tool,
+        namespace: server,
       });
     }
   }
 
   hits.sort((a, b) => b.score - a.score || a.server.localeCompare(b.server) || a.method.localeCompare(b.method));
-  return { servers, hits: hits.slice(0, limit) };
+  // An empty query is a sample, not a lookup, so it stays short.
+  const signed = queryTokens.length > 0 ? SIGNED_HITS : 0;
+  return {
+    servers,
+    hits: hits.slice(0, limit).map(({ record, namespace, ...hit }, index) => {
+      if (index >= signed) return hit;
+      const signature = compactSignature(namespace, record);
+      return signature.length <= MAX_SIGNATURE_CHARS ? { ...hit, signature } : hit;
+    }),
+  };
 }

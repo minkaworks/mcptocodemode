@@ -26,7 +26,16 @@ const executeInput = {
   timeout_ms: z.number().int().positive().optional().describe("Wall-clock limit for this run."),
 };
 
-export function createCodeModeServer(mode: CodeMode): McpServer {
+export type CodeModeServerOptions = {
+  /**
+   * Settles when the catalog is complete. The server answers the handshake at
+   * once, and each tool call waits for this before it reads the catalog.
+   */
+  ready?: Promise<unknown>;
+};
+
+export function createCodeModeServer(mode: CodeMode, options: CodeModeServerOptions = {}): McpServer {
+  const ready = options.ready ?? Promise.resolve();
   const server = new McpServer({
     name: "mcptocodemode",
     version: VERSION,
@@ -37,10 +46,11 @@ export function createCodeModeServer(mode: CodeMode): McpServer {
     {
       title: "Search tools",
       description:
-        "Find tools on the upstream MCP servers by keyword. The response lists every configured server and a few matches (server, method, required arguments, one line). It does not return full schemas. Every server also has resources.list, resources.read, resources.templates, prompts.list, and prompts.get. Call describe before using an unfamiliar method, then execute.",
+        "Find tools on the upstream MCP servers by keyword. The response lists every configured server and a few matches (server, method, required arguments, one line). The top matches include their TypeScript signature, so execute can often follow directly. Every server also has resources.list, resources.read, resources.templates, prompts.list, and prompts.get. Call describe before using an unfamiliar method, then execute.",
       inputSchema: searchInput,
     },
     async ({ query, server: serverName, limit }) => {
+      await ready;
       try {
         return jsonResult(mode.search(query, { server: serverName, limit }));
       } catch (error) {
@@ -58,6 +68,7 @@ export function createCodeModeServer(mode: CodeMode): McpServer {
       inputSchema: describeInput,
     },
     async ({ target }) => {
+      await ready;
       try {
         const typescript = mode.describe(target);
         return {
@@ -79,11 +90,15 @@ export function createCodeModeServer(mode: CodeMode): McpServer {
         "Each upstream server is a global: `await notes.get({ id: \"1\" })`, `await notes.resources.read({ uri })`, `await notes.prompts.get({ name })`.",
         "codemode.search(query) and codemode.describe(target) work inside the sandbox.",
         "The code is an async function body, or a function expression. Return only the final value.",
+        "Independent calls run concurrently with Promise.all.",
         "console.log is captured and returned with the result. Intermediate tool payloads stay in the sandbox.",
       ].join(" "),
       inputSchema: executeInput,
     },
-    async ({ code, timeout_ms }) => jsonResult(await mode.execute(code, { timeoutMs: timeout_ms })),
+    async ({ code, timeout_ms }) => {
+      await ready;
+      return jsonResult(await mode.execute(code, { timeoutMs: timeout_ms }));
+    },
   );
 
   return server;
