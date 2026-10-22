@@ -6,6 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-10-22
+
+### Fixed
+
+- The `mcptocodemode` command is kept when the package is published with npm 11, which drops a `bin` path written as `./dist/cli.js`.
+
+### Changed
+
+- Vitest 4.1.12 for development, which closes two advisories in `@vitest/mocker`. The published package does not include Vitest.
+
 ## [0.2.0] - 2026-10-22
 
 ### Added
@@ -54,7 +64,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - A reference config for the official servers in [modelcontextprotocol/servers](https://github.com/modelcontextprotocol/servers).
 - [REPORT.md](REPORT.md) and `pnpm measure`, comparing flat MCP, an inline SDK, and progressive Code Mode.
 
-[Unreleased]: https://github.com/minkaworks/mcptocodemode/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/minkaworks/mcptocodemode/compare/v0.2.1...HEAD
+[0.2.1]: https://github.com/minkaworks/mcptocodemode/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/minkaworks/mcptocodemode/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/minkaworks/mcptocodemode/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/minkaworks/mcptocodemode/releases/tag/v0.1.0

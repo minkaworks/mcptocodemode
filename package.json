@@ -1,6 +1,6 @@
 {
   "name": "mcptocodemode",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Turn any set of MCP servers into one Code Mode server: search, describe, execute.",
   "author": "dqniel",
   "keywords": [
@@ -23,7 +23,7 @@
   },
   "type": "module",
   "bin": {
-    "mcptocodemode": "./dist/cli.js"
+    "mcptocodemode": "dist/cli.js"
   },
   "exports": {
     ".": "./dist/index.js"
@@ -54,6 +54,6 @@
   "devDependencies": {
     "@types/node": "^24.0.0",
     "typescript": "^5.9.0",
-    "vitest": "^4.1.11"
+    "vitest": "^4.1.12"
   }
 }
