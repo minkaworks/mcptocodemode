@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security report
+    url: https://github.com/minkaworks/mcptocodemode/security/advisories/new
+    about: Report a vulnerability in private. A public issue is the wrong place for a credential or an exploitable bug.

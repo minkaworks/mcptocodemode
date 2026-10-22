@@ -1,0 +1,42 @@
+name: Bug report
+description: Something in search, describe, execute, config, or the sandbox disagrees with the spec or crashes.
+title: "Bug: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: "Leave out tokens, headers, and private file contents. Read SPEC.md when the report is about the three tools."
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you ran, and what came back.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+    validations:
+      required: true
+  - type: textarea
+    id: config
+    attributes:
+      label: Config shape
+      description: Transport and server names only. Replace secrets with ${TOKEN}.
+      render: json
+  - type: input
+    id: versions
+    attributes:
+      label: Versions
+      description: Node.js, mcptocodemode, and the upstream server if the failure is there.
+      placeholder: node 24.x, mcptocodemode 0.1.0
+    validations:
+      required: true
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checks
+      options:
+        - label: I searched the open issues for this failure.
+          required: true

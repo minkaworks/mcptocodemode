@@ -2,6 +2,21 @@
   "name": "mcptocodemode",
   "version": "0.1.0",
   "description": "Turn any set of MCP servers into one Code Mode server: search, describe, execute.",
+  "author": "dqniel",
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "code-mode",
+    "sandbox"
+  ],
+  "homepage": "https://github.com/minkaworks/mcptocodemode#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/minkaworks/mcptocodemode.git"
+  },
+  "bugs": {
+    "url": "https://github.com/minkaworks/mcptocodemode/issues"
+  },
   "type": "module",
   "bin": {
     "mcptocodemode": "./dist/cli.js"
@@ -23,6 +38,7 @@
   "engines": {
     "node": ">=20"
   },
+  "packageManager": "pnpm@10.28.0",
   "license": "MIT",
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.20.0",

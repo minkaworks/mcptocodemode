@@ -1,0 +1,20 @@
+name: Question
+description: Setup, config, or how the three tools are meant to be used.
+title: "Question: "
+labels: ["question"]
+body:
+  - type: markdown
+    attributes:
+      value: "For a crash, use the bug report. For a vulnerability, use a private advisory. Leave secrets out."
+  - type: textarea
+    id: goal
+    attributes:
+      label: What are you trying to do?
+    validations:
+      required: true
+  - type: textarea
+    id: tried
+    attributes:
+      label: What did you already try?
+    validations:
+      required: true

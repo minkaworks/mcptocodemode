@@ -1,5 +1,7 @@
 # MCPtoCodeMode
 
+[Specification](SPEC.md) · [CI](https://github.com/minkaworks/mcptocodemode/actions/workflows/ci.yml) · [MIT License](LICENSE) · [Changelog](CHANGELOG.md)
+
 One MCP server in front of every MCP server you already run. The model sees three tools: `search`, `describe`, and `execute`. It writes JavaScript. The code calls the real servers from a sandbox that has no network and no credentials.
 
 MCP is the standard, so this server does not special-case any product. A stdio process, a streamable HTTP endpoint, and a legacy SSE endpoint all show up the same way: tools, resources, and prompts. The contract is [SPEC.md](SPEC.md). The idea of letting the model write code against those tools comes from [Cloudflare Code Mode](https://blog.cloudflare.com/code-mode/). The wire interface here is MCP, so any MCP client can host it.
@@ -117,3 +119,9 @@ await mode.execute(`return await notes.get({ id: "1" });`);
 The sandbox is [QuickJS](https://github.com/quickjs-ng/quickjs) compiled to WebAssembly, one context per `execute`. Defaults: 30 seconds, 100 tool calls, 64 MiB, 100,000 characters of code. Tool results over 200,000 characters of JSON come back as `{ truncated: true, bytes, preview }`. Image and audio blocks are not copied in. Resource blobs are not copied in either.
 
 These are process limits, not a substitute for upstream authorization. A tool that sends a message still sends it when the code calls it. Deny that method in `beforeCall` when a human has to approve it.
+
+## Repository
+
+Setup, tests, and the license for a contribution are in [CONTRIBUTING.md](CONTRIBUTING.md). Conduct is in [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md). Questions are in [SUPPORT.md](SUPPORT.md). Vulnerabilities go through [SECURITY.md](SECURITY.md).
+
+This repository defines the [minkaworks repository standard](STANDARD.md). Later repositories link to that file.
