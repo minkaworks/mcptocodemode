@@ -6,6 +6,7 @@ import type { Transport } from "@modelcontextprotocol/sdk/shared/transport.js";
 import { catalogFromServers, failedNamespace, findServer } from "./catalog.js";
 import type { ServerSpec } from "./config.js";
 import type { Catalog, JsonSchema, ListedTool, ToolCall } from "./types.js";
+import { VERSION } from "./version.js";
 
 type ContentBlock = {
   type: string;
@@ -34,6 +35,14 @@ export type ConnectFailure = {
   message: string;
 };
 
+/**
+ * Set on every stdio child. A client config that lists this server would
+ * otherwise make each child discover and launch the next one without end.
+ */
+export const DEPTH_ENV = "MCPTOCODEMODE_DEPTH";
+
+export const DEFAULT_CONNECT_TIMEOUT_MS = 60_000;
+
 const PROTOCOL = new Set(["resources.list", "resources.read", "resources.templates", "prompts.list", "prompts.get"]);
 
 export class UpstreamPool {
@@ -49,17 +58,23 @@ export class UpstreamPool {
     this.catalog = catalog;
   }
 
-  /** Connect each server on its own. One failure is recorded and the rest continue. */
-  static async connect(specs: ServerSpec[]): Promise<UpstreamPool> {
+  /**
+   * Connect every server at once. One failure, or one server that does not
+   * answer within `timeoutMs`, is recorded and the rest continue.
+   */
+  static async connect(
+    specs: ServerSpec[],
+    options: { timeoutMs?: number; env?: NodeJS.ProcessEnv } = {},
+  ): Promise<UpstreamPool> {
+    const timeoutMs = options.timeoutMs ?? DEFAULT_CONNECT_TIMEOUT_MS;
+    const depth = nestingDepth(options.env ?? process.env) + 1;
+    const settled = await Promise.allSettled(specs.map((spec) => connectOne(spec, timeoutMs, depth)));
     const sessions: Session[] = [];
     const failures: ConnectFailure[] = [];
-    for (const spec of specs) {
-      try {
-        sessions.push(await connectOne(spec));
-      } catch (error) {
-        failures.push({ name: spec.name, message: publicError(error) });
-      }
-    }
+    settled.forEach((outcome, index) => {
+      if (outcome.status === "fulfilled") sessions.push(outcome.value);
+      else failures.push({ name: specs[index]?.name ?? "unknown", message: publicError(outcome.reason) });
+    });
     return new UpstreamPool(sessions, failures);
   }
 
@@ -89,25 +104,47 @@ export function publicError(error: unknown): string {
     .slice(0, 300);
 }
 
-async function connectOne(spec: ServerSpec): Promise<Session> {
-  const client = new Client({ name: "mcptocodemode", version: "0.1.0" });
-  await client.connect(openTransport(spec));
+/** How many mcptocodemode processes sit above this one. 0 for the one a client started. */
+export function nestingDepth(env: NodeJS.ProcessEnv): number {
+  const depth = Number.parseInt(env[DEPTH_ENV] ?? "", 10);
+  return Number.isFinite(depth) && depth > 0 ? depth : 0;
+}
+
+/** Environment for a stdio child: the SDK defaults, the server's own env, and the nesting depth. */
+export function childEnv(spec: ServerSpec, depth: number): Record<string, string> {
+  return { ...getDefaultEnvironment(), ...spec.env, [DEPTH_ENV]: String(depth) };
+}
+
+async function connectOne(spec: ServerSpec, timeoutMs: number, depth: number): Promise<Session> {
+  const client = new Client({ name: "mcptocodemode", version: VERSION });
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const deadline = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new Error(`no answer within ${timeoutMs} ms`)), timeoutMs);
+  });
   try {
-    const tools = await listAllTools(client);
+    const tools = await Promise.race([
+      (async () => {
+        await client.connect(openTransport(spec, depth));
+        return listAllTools(client);
+      })(),
+      deadline,
+    ]);
     return { spec, client, tools };
   } catch (error) {
     await client.close().catch(() => undefined);
     throw error;
+  } finally {
+    clearTimeout(timer);
   }
 }
 
-function openTransport(spec: ServerSpec): Transport {
+function openTransport(spec: ServerSpec, depth: number): Transport {
   if (spec.transport === "stdio") {
     if (!spec.command) throw new Error(`Server "${spec.name}" needs a command`);
     return new StdioClientTransport({
       command: spec.command,
       args: spec.args,
-      env: spec.env ? { ...getDefaultEnvironment(), ...spec.env } : undefined,
+      env: childEnv(spec, depth),
       cwd: spec.cwd,
     });
   }

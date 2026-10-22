@@ -11,12 +11,22 @@ function comment(description: string, max: number): string {
   return `/**\n${lines.map((line) => ` * ${line}`).join("\n")}\n */\n`;
 }
 
-function renderMethod(server: ServerNamespace, tool: ToolRecord, docChars: number): string {
+function signature(name: string, tool: ToolRecord, docChars: number): string {
   const input = inputType(tool.inputSchema, { docChars });
   const optional = input.optional ? "?" : "";
   const header = comment(tool.description, docChars === 160 ? 160 : 2000);
-  return `${header}${server.ident}.${tool.method}(input${optional}: ${input.type}): Promise<unknown>;`;
+  return `${header}${name}(input${optional}: ${input.type}): Promise<unknown>;`;
 }
+
+function renderMethod(server: ServerNamespace, tool: ToolRecord, docChars: number): string {
+  return signature(`${server.ident}.${tool.method}`, tool, docChars);
+}
+
+function indent(block: string): string {
+  return block.replace(/^/gm, "  ");
+}
+
+const PROTOCOL_GROUPS = ["resources", "prompts"] as const;
 
 const SERVER_CHAR_BUDGET = 24_000;
 
@@ -47,12 +57,21 @@ function renderServer(server: ServerNamespace): string {
   if (server.error) {
     return `declare const ${server.ident}: {};\n// ${server.ident} did not connect: ${server.error}`;
   }
+  // Members of an object type, so the output is a valid declaration file.
+  // Protocol methods nest under `resources` and `prompts`, as they do in the sandbox.
   const blocks: string[] = [];
-  let used = 0;
+  for (const group of PROTOCOL_GROUPS) {
+    const members = server.tools
+      .filter((tool) => tool.kind === "protocol" && tool.method.startsWith(`${group}.`))
+      .map((tool) => indent(signature(tool.method.slice(group.length + 1), tool, 160)));
+    if (members.length > 0) blocks.push(`${group}: {\n${members.join("\n")}\n};`);
+  }
+  let used = blocks.reduce((sum, block) => sum + block.length, 0);
   let hidden = 0;
   for (const tool of server.tools) {
-    const block = renderMethod(server, tool, 160);
-    if (used + block.length > SERVER_CHAR_BUDGET && blocks.length > 0) {
+    if (tool.kind === "protocol") continue;
+    const block = signature(tool.method, tool, 160);
+    if (used + block.length > SERVER_CHAR_BUDGET && blocks.length > PROTOCOL_GROUPS.length) {
       hidden += 1;
       continue;
     }
@@ -63,7 +82,7 @@ function renderServer(server: ServerNamespace): string {
     hidden > 0
       ? `\n\n// ${hidden} more methods omitted. Call describe("${server.ident}.method") for one signature.`
       : "";
-  return `declare const ${server.ident}: {\n${blocks.map((block) => block.replace(/^/gm, "  ")).join("\n")}\n};${hiddenNote}`;
+  return `declare const ${server.ident}: {\n${blocks.map(indent).join("\n")}\n};${hiddenNote}`;
 }
 
 export function renderSdk(catalog: Catalog): string {

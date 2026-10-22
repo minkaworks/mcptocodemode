@@ -8,7 +8,8 @@ import { loadConfigs } from "./config.js";
 import { discoverConfig } from "./discover.js";
 import { createCodeModeServer } from "./server.js";
 import type { Limits } from "./types.js";
-import { UpstreamPool } from "./upstream.js";
+import { nestingDepth, UpstreamPool } from "./upstream.js";
+import { VERSION } from "./version.js";
 
 const command = process.argv[2];
 
@@ -91,6 +92,14 @@ async function openPool(): Promise<{ pool: UpstreamPool; mode: CodeMode }> {
 }
 
 async function serve(): Promise<void> {
+  if (nestingDepth(process.env) > 0) {
+    // A client config that lists this server is read again by discovery.
+    // Without this exit, every child would launch the next one.
+    process.stderr.write(
+      "mcptocodemode: not starting inside another mcptocodemode. A config it read lists mcptocodemode itself; that entry is skipped.\n",
+    );
+    process.exit(1);
+  }
   const { pool, mode } = await openPool();
   const server = createCodeModeServer(mode);
   const transport = new StdioServerTransport();
@@ -136,7 +145,7 @@ async function inspect(kind: "sdk" | "list"): Promise<void> {
 }
 
 async function serveDemo(): Promise<void> {
-  const server = new McpServer({ name: "notes", version: "0.1.0" });
+  const server = new McpServer({ name: "notes", version: VERSION });
   const notes = [
     { id: "1", title: "Buy milk", body: "Whole milk." },
     { id: "2", title: "Ship codemode", body: "Three tools, every upstream server." },

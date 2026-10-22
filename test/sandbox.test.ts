@@ -123,4 +123,26 @@ describe("sandbox", () => {
     expect(result.error).toContain("list is blocked");
     expect(ran).toBe(false);
   });
+
+  it("accepts an IIFE, a bare expression, and a body that starts with a parenthesis", async () => {
+    const runtime = mode();
+    const iife = await runtime.execute(`(async () => (await notes.list()).length)()`);
+    expect(iife).toMatchObject({ ok: true, result: 2 });
+    const expression = await runtime.execute(`(await notes.list()).length`);
+    expect(expression).toMatchObject({ ok: true, result: 2 });
+    const body = await runtime.execute(`(await notes.list()).forEach(() => {});\nreturn "body";`);
+    expect(body).toMatchObject({ ok: true, result: "body" });
+  });
+
+  it("survives a run that ends while a call is still in flight", async () => {
+    const slow = new CodeMode(mode().catalog, () => new Promise((resolve) => setTimeout(() => resolve([]), 50)));
+    const unawaited = await slow.execute(`notes.list(); return 1;`);
+    expect(unawaited).toMatchObject({ ok: true, result: 1 });
+    const thrown = await slow.execute(`notes.list(); throw new Error("boom");`);
+    expect(thrown).toMatchObject({ ok: false, error: "Error: boom" });
+    const timedOut = await slow.execute(`await notes.list(); while (true) {}`, { timeoutMs: 20 });
+    expect(timedOut.ok).toBe(false);
+    await new Promise((resolve) => setTimeout(resolve, 80));
+    expect(await slow.execute(`return "still alive";`)).toMatchObject({ ok: true, result: "still alive" });
+  });
 });

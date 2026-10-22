@@ -18,7 +18,18 @@ export { schemaToType } from "./schema.js";
 export { searchCatalog } from "./search.js";
 export { createCodeModeServer } from "./server.js";
 export { toIdent, uniqueIdent } from "./ident.js";
-export { UpstreamPool, callUpstreamTool, publicError, valueFromToolResult, type ConnectFailure } from "./upstream.js";
+export {
+  DEFAULT_CONNECT_TIMEOUT_MS,
+  DEPTH_ENV,
+  UpstreamPool,
+  callUpstreamTool,
+  childEnv,
+  nestingDepth,
+  publicError,
+  valueFromToolResult,
+  type ConnectFailure,
+} from "./upstream.js";
+export { VERSION } from "./version.js";
 export {
   PROTOCOL_VERSION,
   defaultLimits,

@@ -2,6 +2,7 @@ import {
   getQuickJS,
   shouldInterruptAfterDeadline,
   type QuickJSContext,
+  type QuickJSDeferredPromise,
   type QuickJSHandle,
 } from "quickjs-emscripten";
 import { describeTarget } from "./describe.js";
@@ -10,11 +11,28 @@ import type { CallTrace, Catalog, Dispatcher, ExecuteResult, Limits } from "./ty
 
 export function wrapCode(code: string): string {
   const trimmed = code.trim();
-  if (/^(async\s+)?function\b/.test(trimmed) || /^(async\s*)?\(/.test(trimmed) || trimmed.startsWith("async ")) {
-    return `(${trimmed})()`;
+  if (looksLikeExpression(trimmed)) {
+    // A function expression is called. Anything else that parses as an
+    // expression, such as an IIFE the model already invoked, is its value.
+    return `(async () => {\nconst __entry = (${trimmed});\nreturn typeof __entry === "function" ? await __entry() : await __entry;\n})()`;
   }
+  return wrapBody(code);
+}
+
+function wrapBody(code: string): string {
   return `(async () => {\n${code}\n})()`;
 }
+
+function looksLikeExpression(trimmed: string): boolean {
+  return /^(async\s+)?function\b/.test(trimmed) || /^(async\s*)?\(/.test(trimmed) || trimmed.startsWith("async ");
+}
+
+/**
+ * Host promises the guest has not seen settle. A run can end while a call is
+ * still in flight (`notes.list(); return 1`). Their resolver handles have to be
+ * freed before the context, or QuickJS aborts the whole process.
+ */
+const pendingByVm = new WeakMap<QuickJSContext, Set<QuickJSDeferredPromise>>();
 
 type RunOptions = {
   limits: Limits;
@@ -70,7 +88,12 @@ export async function runInSandbox(
       }
     }, () => alive);
 
-    const evaluated = vm.evalCode(wrapCode(code));
+    let evaluated = vm.evalCode(wrapCode(code));
+    if (evaluated.error && looksLikeExpression(code.trim()) && isSyntaxError(vm, evaluated.error)) {
+      // `(a).b(); return c` starts like an expression but is a function body.
+      evaluated.error.dispose();
+      evaluated = vm.evalCode(wrapBody(code));
+    }
     if (evaluated.error) {
       const message = readError(vm, evaluated.error);
       evaluated.error.dispose();
@@ -105,8 +128,14 @@ export async function runInSandbox(
     return { ok: false, error: normalizeError(error instanceof Error ? error.message : String(error)), logs, calls };
   } finally {
     alive = false;
+    for (const deferred of pendingByVm.get(vm) ?? []) deferred.dispose();
     vm.dispose();
   }
+}
+
+function isSyntaxError(vm: QuickJSContext, handle: QuickJSHandle): boolean {
+  const dumped = vm.dump(handle) as { name?: unknown } | undefined;
+  return typeof dumped === "object" && dumped !== null && dumped.name === "SyntaxError";
 }
 
 function pump(vm: QuickJSContext, isAlive: () => boolean): void {
@@ -233,6 +262,13 @@ function hostFunction(
   return vm.newFunction(name, (...argHandles) => {
     const args = argHandles.map((handle) => vm.dump(handle));
     const deferred = vm.newPromise();
+    let pending = pendingByVm.get(vm);
+    if (!pending) {
+      pending = new Set();
+      pendingByVm.set(vm, pending);
+    }
+    pending.add(deferred);
+    void deferred.settled.then(() => pending.delete(deferred));
     fn(args).then(
       (value) => {
         if (!isAlive()) return;

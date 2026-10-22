@@ -111,4 +111,21 @@ describe("discovery", () => {
     expect(found.files.some((file) => file.endsWith("config.toml"))).toBe(true);
     expect(JSON.stringify(found)).not.toContain("Bearer");
   });
+
+  it("reads Claude Code servers stored for this project in ~/.claude.json", async () => {
+    const home = await mkdtemp(path.join(tmpdir(), "codemode-home-"));
+    const cwd = await mkdtemp(path.join(tmpdir(), "codemode-cwd-"));
+    await writeFile(
+      path.join(home, ".claude.json"),
+      JSON.stringify({
+        mcpServers: { user: { command: "user-server" } },
+        projects: {
+          [path.resolve(cwd)]: { mcpServers: { local: { type: "http", url: "https://example.com/mcp" } } },
+          "/somewhere/else": { mcpServers: { other: { command: "nope" } } },
+        },
+      }),
+    );
+    const found = await discoverConfig({ cwd, home, platform: "linux", env: {} });
+    expect(found.servers.map((server) => server.name)).toEqual(["user", "local"]);
+  });
 });

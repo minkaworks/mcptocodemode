@@ -1,12 +1,16 @@
 {
   "name": "mcptocodemode",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Turn any set of MCP servers into one Code Mode server: search, describe, execute.",
   "author": "dqniel",
   "keywords": [
     "mcp",
     "model-context-protocol",
     "code-mode",
+    "mcp-server",
+    "mcp-gateway",
+    "mcp-proxy",
+    "quickjs",
     "sandbox"
   ],
   "homepage": "https://github.com/minkaworks/mcptocodemode#readme",
@@ -33,7 +37,8 @@
     "build": "tsc -p tsconfig.json",
     "test": "vitest run",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "measure": "node scripts/measure.mjs"
+    "measure": "node scripts/measure.mjs",
+    "prepack": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\" && tsc -p tsconfig.json"
   },
   "engines": {
     "node": ">=20"

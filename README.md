@@ -8,7 +8,33 @@ MCP is the standard, so this server does not special-case any product. A stdio p
 
 A client that forwards every upstream tool can put a couple of hundred tools in the prompt. This server keeps that count at 3, however many servers connect later.
 
-## Run
+```bash
+npx -y mcptocodemode list
+```
+
+That reads the MCP configs already on this machine, connects to each server, and prints the namespaces the code will see. Register it with a client in place of those servers:
+
+```bash
+claude mcp add codemode -- npx -y mcptocodemode serve
+```
+
+Discovery reads the same client configs that list `codemode`. The copy it would launch notices it is nested and exits, so that entry is skipped. The other servers load.
+
+## Numbers
+
+Seven official reference servers, 55 tools. No model in the loop. Full method and raw data in [REPORT.md](REPORT.md).
+
+| | Flat MCP | Code Mode |
+| --- | ---: | ---: |
+| Tool definitions in the prompt | 31,179 bytes | 2,471 bytes |
+| Count errors in a 2,000-line log: bytes back | 129,977 | 402 |
+| Total 25 order files: turns | 26 | 1 |
+| Total 25 order files: context re-read across turns | 172,698 bytes | 1,826 bytes |
+| Eight small calls: median wall clock | 2,529 ms | 2,726 ms |
+
+The prompt figure stays at 2,471 bytes as servers are added. Code Mode does not make upstream calls faster. It saves the bytes and the turns between them.
+
+## Develop
 
 ```bash
 pnpm install
@@ -23,7 +49,7 @@ node dist/cli.js serve --config mcptocodemode.config.example.json
 
 With no `--config`, `serve` reads the MCP configs already on the machine. It does not contact a registry and it does not invent servers. It looks at, in order:
 
-- `~/.codex/config.toml`, Claude Desktop, `~/.claude.json`, `~/.cursor/mcp.json`, `~/.grok/config.toml`
+- `~/.codex/config.toml`, Claude Desktop, `~/.claude.json` (user servers, then the ones Claude Code stores for this project), `~/.cursor/mcp.json`, `~/.grok/config.toml`
 - from the git root down to the working directory: `.mcp.json`, `mcp.json`, `.cursor/mcp.json`, `.vscode/mcp.json`, `.grok/config.toml`
 - `./mcptocodemode.config.json`
 
@@ -56,7 +82,7 @@ Accepted files:
 
 `${VAR}` expands from the environment of this process. A name that is unset stays as written. Do not commit secrets.
 
-One server that fails to connect is reported on stderr and skipped. The others still load. Search lists the failure. Restart to pick up tools added after connect.
+Servers connect in parallel. One that fails, or does not answer within 60 seconds, is reported on stderr and skipped. The others still load. Search lists the failure. Restart to pick up tools added after connect.
 
 Grok, or any other MCP client:
 

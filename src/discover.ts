@@ -31,6 +31,8 @@ export async function discoverConfig(options: DiscoverOptions = {}): Promise<Dis
   const platform = options.platform ?? process.platform;
   const env = options.env ?? process.env;
   const candidates = await discoveryPaths(cwd, home, platform);
+  const claudeJson = path.join(home, ".claude.json");
+  const projectKeys = [...new Set([await findProjectRoot(cwd), path.resolve(cwd)])];
 
   const files: string[] = [];
   const warnings: string[] = [];
@@ -57,6 +59,12 @@ export async function discoverConfig(options: DiscoverOptions = {}): Promise<Dis
       continue;
     }
     const parsed = parseConfig(text, candidate, env);
+    if (candidate === claudeJson) {
+      // `claude mcp add` defaults to local scope, stored per project directory.
+      const local = claudeProjectServers(text, projectKeys, candidate, env);
+      parsed.servers = mergeServers(parsed.servers, local.servers);
+      parsed.issues.push(...local.issues);
+    }
     warnings.push(...parsed.issues);
     if (parsed.servers.length === 0 && !parsed.limits) continue;
     files.push(candidate);
@@ -65,6 +73,36 @@ export async function discoverConfig(options: DiscoverOptions = {}): Promise<Dis
   }
 
   return { servers, limits: { ...defaultLimits, ...limits }, files, warnings };
+}
+
+/** Servers Claude Code stores under `projects["<dir>"].mcpServers` in `~/.claude.json`. */
+function claudeProjectServers(
+  text: string,
+  projectKeys: string[],
+  filename: string,
+  env: NodeJS.ProcessEnv,
+): { servers: ServerSpec[]; issues: string[] } {
+  let value: unknown;
+  try {
+    value = JSON.parse(text);
+  } catch {
+    return { servers: [], issues: [] };
+  }
+  const projects = isRecord(value) && isRecord(value.projects) ? value.projects : {};
+  let servers: ServerSpec[] = [];
+  const issues: string[] = [];
+  for (const key of projectKeys) {
+    const project = projects[key];
+    if (!isRecord(project) || !isRecord(project.mcpServers)) continue;
+    const parsed = parseConfig(JSON.stringify({ mcpServers: project.mcpServers }), `${filename} (${key})`, env);
+    servers = mergeServers(servers, parsed.servers);
+    issues.push(...parsed.issues);
+  }
+  return { servers, issues };
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 export async function discoveryPaths(cwd: string, home: string, platform: NodeJS.Platform): Promise<string[]> {

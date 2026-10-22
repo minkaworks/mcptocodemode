@@ -1,6 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import type { CodeMode } from "./codemode.js";
+import { VERSION } from "./version.js";
 
 const searchInput = {
   query: z.string().describe("Words that describe the tool you need. Empty lists a sample of tools."),
@@ -28,7 +29,7 @@ const executeInput = {
 export function createCodeModeServer(mode: CodeMode): McpServer {
   const server = new McpServer({
     name: "mcptocodemode",
-    version: "0.1.0",
+    version: VERSION,
   });
 
   server.registerTool(

@@ -15,6 +15,10 @@ process.env.CODEMODE_MEMORY_FILE = memoryFile;
 process.env.CODEMODE_GIT_REPO = gitRepo;
 
 const helloPath = path.join(fsRoot, "hello.txt");
+const logPath = path.join(fsRoot, "service.log");
+const ordersDir = path.join(fsRoot, "orders");
+const logLines = 2_000;
+const orderCount = 25;
 const runs = 3;
 const pageUrl = "https://github.com/modelcontextprotocol/servers";
 
@@ -41,6 +45,8 @@ try {
     prompt: {},
     discovery: {},
     task: { direct: [], code: [] },
+    scaling: [],
+    tasks: {},
   };
 
   report.prompt.flat = toolBytes(flatTools(pool.catalog));
@@ -78,6 +84,10 @@ try {
     bytes: serverDocs.reduce((sum, text) => sum + Buffer.byteLength(text), 0),
   };
 
+  report.scaling = scaling(pool.catalog, report.prompt.codeMode.bytes, report.prompt.inlineSdk.executeToolBytes);
+  report.tasks.bigFile = await compare(pool, mode, bigFileTask(), config.limits.maxResultChars);
+  report.tasks.fanOut = await compare(pool, mode, fanOutTask(), config.limits.maxResultChars);
+
   const task = buildTask(helloPath, gitRepo);
   for (let i = 0; i < runs; i += 1) {
     process.stderr.write(`direct ${i + 1}\n`);
@@ -97,6 +107,19 @@ try {
 function prepareFixtures() {
   mkdirSync(fsRoot, { recursive: true });
   writeFileSync(helloPath, "hello from the filesystem server\n");
+  writeFileSync(logPath, serviceLog());
+  mkdirSync(ordersDir, { recursive: true });
+  for (let i = 1; i <= orderCount; i += 1) {
+    const order = {
+      id: `ord-${String(i).padStart(3, "0")}`,
+      customer: `customer-${(i * 7) % 11}`,
+      status: i % 4 === 0 ? "refunded" : "paid",
+      total: Math.round(((i * 37) % 200) * 100 + 999) / 100,
+      lines: Array.from({ length: 3 + (i % 4) }, (_, n) => ({ sku: `sku-${(i + n) % 13}`, qty: 1 + ((i + n) % 3) })),
+      note: "Deterministic fixture written by scripts/measure.mjs.",
+    };
+    writeFileSync(path.join(ordersDir, `${order.id}.json`), `${JSON.stringify(order, null, 2)}\n`);
+  }
   mkdirSync(path.dirname(memoryFile), { recursive: true });
   if (existsSync(path.join(gitRepo, ".git"))) return;
   mkdirSync(gitRepo, { recursive: true });
@@ -105,6 +128,114 @@ function prepareFixtures() {
   execSync("git config user.name demo", { cwd: gitRepo });
   writeFileSync(path.join(gitRepo, "README.md"), "hello from the official git server\n");
   execSync("git add README.md && git commit -q -m demo", { cwd: gitRepo });
+}
+
+/** A deterministic log: mostly INFO, an ERROR every 97 lines. */
+function serviceLog() {
+  const lines = [];
+  for (let i = 1; i <= logLines; i += 1) {
+    const at = new Date(Date.UTC(2026, 9, 22, 9, 0, i)).toISOString();
+    if (i % 97 === 0) lines.push(`${at} ERROR payment-worker job=${i} upstream timed out after 30000 ms`);
+    else lines.push(`${at} INFO  http GET /api/orders/${i % 50} 200 ${(i * 13) % 90 + 4}ms`);
+  }
+  return `${lines.join("\n")}\n`;
+}
+
+/** Prompt bytes as servers are added one at a time, in config order. */
+function scaling(catalog, codeModeBytes, executeToolBytes) {
+  const rows = [];
+  const connected = catalog.servers.filter((server) => !server.error);
+  for (let n = 1; n <= connected.length; n += 1) {
+    const subset = { servers: connected.slice(0, n) };
+    const flat = toolBytes(flatTools(subset));
+    const sdkBytes = connected
+      .slice(0, n)
+      .reduce((sum, server) => sum + Buffer.byteLength(mode.describe(server.ident)), 0);
+    rows.push({
+      servers: n,
+      added: connected[n - 1].name,
+      tools: flat.tools,
+      flat: flat.bytes,
+      inlineSdk: sdkBytes + executeToolBytes,
+      codeMode: codeModeBytes,
+    });
+  }
+  return rows;
+}
+
+/** Read one 2,000-line log. The model wants the ERROR count and the last three. */
+function bigFileTask() {
+  return {
+    name: "Count ERROR lines in a 2,000-line log and return the last three",
+    direct: [{ server: "filesystem", method: "read_text_file", tool: "read_text_file", input: { path: logPath } }],
+    code: [
+      `const file = await filesystem.read_text_file({ path: ${JSON.stringify(logPath)} });`,
+      `const errors = String(file.content ?? file).split("\\n").filter((line) => line.includes(" ERROR "));`,
+      `return { count: errors.length, last: errors.slice(-3) };`,
+    ].join("\n"),
+  };
+}
+
+/** List a directory, read every order, and total the paid ones. */
+function fanOutTask() {
+  const direct = [{ server: "filesystem", method: "list_directory", tool: "list_directory", input: { path: ordersDir } }];
+  for (let i = 1; i <= orderCount; i += 1) {
+    const file = path.join(ordersDir, `ord-${String(i).padStart(3, "0")}.json`);
+    direct.push({ server: "filesystem", method: "read_text_file", tool: "read_text_file", input: { path: file } });
+  }
+  return {
+    name: `Read ${orderCount} order files and total the paid ones`,
+    direct,
+    code: [
+      `const listing = await filesystem.list_directory({ path: ${JSON.stringify(ordersDir)} });`,
+      `const names = String(listing.content ?? listing).split("\\n").map((line) => line.replace("[FILE] ", "").trim()).filter((name) => name.endsWith(".json"));`,
+      `const orders = await Promise.all(names.map(async (name) => {`,
+      `  const file = await filesystem.read_text_file({ path: ${JSON.stringify(ordersDir)} + "/" + name });`,
+      `  return JSON.parse(String(file.content ?? file));`,
+      `}));`,
+      `const paid = orders.filter((order) => order.status === "paid");`,
+      `return { orders: orders.length, paid: paid.length, total: Math.round(paid.reduce((sum, order) => sum + order.total, 0) * 100) / 100 };`,
+    ].join("\n"),
+  };
+}
+
+/**
+ * Run a task both ways. Flat: every call is a model turn and its result enters
+ * the conversation; each later turn re-reads the earlier ones. Code Mode: one
+ * execute, and only its envelope comes back.
+ */
+async function compare(pool, mode, task, maxResultChars) {
+  const flatResults = [];
+  const started = performance.now();
+  for (const call of task.direct) {
+    const value = await pool.call(call, maxResultChars);
+    flatResults.push(jsonBytes(value));
+  }
+  const flatMs = elapsed(started);
+  let running = 0;
+  let reread = 0;
+  for (const bytes of flatResults) {
+    running += bytes;
+    reread += running;
+  }
+  const codeStarted = performance.now();
+  const result = await mode.execute(task.code);
+  const codeMs = elapsed(codeStarted);
+  if (!result.ok) throw new Error(`${task.name}: ${result.error}`);
+  const envelope = jsonBytes({ ok: result.ok, result: result.result, logs: result.logs, calls: result.calls });
+  return {
+    name: task.name,
+    flat: { turns: task.direct.length, resultBytes: running, rereadBytes: reread, ms: flatMs },
+    codeMode: {
+      turns: 1,
+      codeBytes: Buffer.byteLength(task.code),
+      envelopeBytes: envelope,
+      answerBytes: jsonBytes(result.result),
+      upstreamCalls: result.calls.length,
+      ms: codeMs,
+    },
+    answer: result.result,
+  };
 }
 
 function flatTools(catalog) {
