@@ -1,0 +1,457 @@
+{
+  "at": "2026-10-22T22:53:43.684Z",
+  "node": "v26.12.1",
+  "protocol": "0.1",
+  "servers": [
+    {
+      "name": "everything",
+      "ident": "everything",
+      "tools": 16,
+      "error": null
+    },
+    {
+      "name": "filesystem",
+      "ident": "filesystem",
+      "tools": 14,
+      "error": null
+    },
+    {
+      "name": "memory",
+      "ident": "memory",
+      "tools": 9,
+      "error": null
+    },
+    {
+      "name": "sequential-thinking",
+      "ident": "sequential_thinking",
+      "tools": 1,
+      "error": null
+    },
+    {
+      "name": "time",
+      "ident": "time",
+      "tools": 2,
+      "error": null
+    },
+    {
+      "name": "git",
+      "ident": "git",
+      "tools": 12,
+      "error": null
+    },
+    {
+      "name": "fetch",
+      "ident": "fetch",
+      "tools": 1,
+      "error": null
+    }
+  ],
+  "prompt": {
+    "flat": {
+      "tools": 55,
+      "bytes": 31179,
+      "largest": [
+        {
+          "name": "sequential_thinking__sequentialthinking",
+          "bytes": 4060
+        },
+        {
+          "name": "everything__gzip-file-as-resource",
+          "bytes": 1107
+        },
+        {
+          "name": "fetch__fetch",
+          "bytes": 1052
+        },
+        {
+          "name": "git__git_log",
+          "bytes": 906
+        },
+        {
+          "name": "git__git_branch",
+          "bytes": 875
+        }
+      ]
+    },
+    "codeMode": {
+      "tools": 3,
+      "bytes": 2471,
+      "largest": [
+        {
+          "name": "execute",
+          "bytes": 974
+        },
+        {
+          "name": "search",
+          "bytes": 867
+        },
+        {
+          "name": "describe",
+          "bytes": 630
+        }
+      ]
+    },
+    "inlineSdk": {
+      "tools": 1,
+      "sdkBytes": 22722,
+      "executeToolBytes": 974,
+      "bytes": 23696
+    }
+  },
+  "discovery": {
+    "emptySearch": {
+      "bytes": 2030,
+      "hits": 8
+    },
+    "usedMethods": {
+      "count": 8,
+      "bytes": 6108
+    },
+    "everyServer": {
+      "count": 7,
+      "bytes": 22601
+    }
+  },
+  "task": {
+    "direct": [
+      {
+        "ms": 2554,
+        "bytes": 5823,
+        "calls": [
+          {
+            "method": "time.get_current_time",
+            "ok": true,
+            "ms": 19,
+            "bytes": 113,
+            "preview": "{\"timezone\":\"America/Mexico_City\",\"datetime\":\"2026-10-22T16:53:43-06:00\",\"day_of_week\":\"Thursday\",\"i"
+          },
+          {
+            "method": "filesystem.read_text_file",
+            "ok": true,
+            "ms": 7,
+            "bytes": 48,
+            "preview": "{\"content\":\"hello from the filesystem server\\n\"}"
+          },
+          {
+            "method": "git.git_log",
+            "ok": true,
+            "ms": 66,
+            "bytes": 133,
+            "preview": "\"Commit history:\\nCommit: 4d963ffbb56f56b20f707dcf272a605a5b263c0d\\nAuthor: demo\\nDate: 2026-10-22 1"
+          },
+          {
+            "method": "sequential_thinking.sequentialthinking",
+            "ok": true,
+            "ms": 6,
+            "bytes": 102,
+            "preview": "{\"thoughtNumber\":1,\"totalThoughts\":1,\"nextThoughtNeeded\":false,\"branches\":[],\"thoughtHistoryLength\":"
+          },
+          {
+            "method": "memory.create_entities",
+            "ok": true,
+            "ms": 12,
+            "bytes": 43,
+            "preview": "{\"entities\":[],\"skipped\":[\"MCPtoCodeMode\"]}"
+          },
+          {
+            "method": "memory.read_graph",
+            "ok": true,
+            "ms": 2,
+            "bytes": 134,
+            "preview": "{\"entities\":[{\"name\":\"MCPtoCodeMode\",\"entityType\":\"project\",\"observations\":[\"Gateway in front of man"
+          },
+          {
+            "method": "fetch.fetch",
+            "ok": true,
+            "ms": 2435,
+            "bytes": 5223,
+            "preview": "\"Contents of https://github.com/modelcontextprotocol/servers:\\nThis repository is a collection of *r"
+          },
+          {
+            "method": "everything.echo",
+            "ok": true,
+            "ms": 6,
+            "bytes": 27,
+            "preview": "\"Echo: hello from codemode\""
+          }
+        ]
+      },
+      {
+        "ms": 2020,
+        "bytes": 5823,
+        "calls": [
+          {
+            "method": "time.get_current_time",
+            "ok": true,
+            "ms": 4,
+            "bytes": 113,
+            "preview": "{\"timezone\":\"America/Mexico_City\",\"datetime\":\"2026-10-22T16:53:48-06:00\",\"day_of_week\":\"Thursday\",\"i"
+          },
+          {
+            "method": "filesystem.read_text_file",
+            "ok": true,
+            "ms": 2,
+            "bytes": 48,
+            "preview": "{\"content\":\"hello from the filesystem server\\n\"}"
+          },
+          {
+            "method": "git.git_log",
+            "ok": true,
+            "ms": 94,
+            "bytes": 133,
+            "preview": "\"Commit history:\\nCommit: 4d963ffbb56f56b20f707dcf272a605a5b263c0d\\nAuthor: demo\\nDate: 2026-10-22 1"
+          },
+          {
+            "method": "sequential_thinking.sequentialthinking",
+            "ok": true,
+            "ms": 2,
+            "bytes": 102,
+            "preview": "{\"thoughtNumber\":1,\"totalThoughts\":1,\"nextThoughtNeeded\":false,\"branches\":[],\"thoughtHistoryLength\":"
+          },
+          {
+            "method": "memory.create_entities",
+            "ok": true,
+            "ms": 5,
+            "bytes": 43,
+            "preview": "{\"entities\":[],\"skipped\":[\"MCPtoCodeMode\"]}"
+          },
+          {
+            "method": "memory.read_graph",
+            "ok": true,
+            "ms": 3,
+            "bytes": 134,
+            "preview": "{\"entities\":[{\"name\":\"MCPtoCodeMode\",\"entityType\":\"project\",\"observations\":[\"Gateway in front of man"
+          },
+          {
+            "method": "fetch.fetch",
+            "ok": true,
+            "ms": 1910,
+            "bytes": 5223,
+            "preview": "\"Contents of https://github.com/modelcontextprotocol/servers:\\nThis repository is a collection of *r"
+          },
+          {
+            "method": "everything.echo",
+            "ok": true,
+            "ms": 2,
+            "bytes": 27,
+            "preview": "\"Echo: hello from codemode\""
+          }
+        ]
+      },
+      {
+        "ms": 1909,
+        "bytes": 5823,
+        "calls": [
+          {
+            "method": "time.get_current_time",
+            "ok": true,
+            "ms": 3,
+            "bytes": 113,
+            "preview": "{\"timezone\":\"America/Mexico_City\",\"datetime\":\"2026-10-22T16:53:52-06:00\",\"day_of_week\":\"Thursday\",\"i"
+          },
+          {
+            "method": "filesystem.read_text_file",
+            "ok": true,
+            "ms": 2,
+            "bytes": 48,
+            "preview": "{\"content\":\"hello from the filesystem server\\n\"}"
+          },
+          {
+            "method": "git.git_log",
+            "ok": true,
+            "ms": 86,
+            "bytes": 133,
+            "preview": "\"Commit history:\\nCommit: 4d963ffbb56f56b20f707dcf272a605a5b263c0d\\nAuthor: demo\\nDate: 2026-10-22 1"
+          },
+          {
+            "method": "sequential_thinking.sequentialthinking",
+            "ok": true,
+            "ms": 2,
+            "bytes": 102,
+            "preview": "{\"thoughtNumber\":1,\"totalThoughts\":1,\"nextThoughtNeeded\":false,\"branches\":[],\"thoughtHistoryLength\":"
+          },
+          {
+            "method": "memory.create_entities",
+            "ok": true,
+            "ms": 4,
+            "bytes": 43,
+            "preview": "{\"entities\":[],\"skipped\":[\"MCPtoCodeMode\"]}"
+          },
+          {
+            "method": "memory.read_graph",
+            "ok": true,
+            "ms": 1,
+            "bytes": 134,
+            "preview": "{\"entities\":[{\"name\":\"MCPtoCodeMode\",\"entityType\":\"project\",\"observations\":[\"Gateway in front of man"
+          },
+          {
+            "method": "fetch.fetch",
+            "ok": true,
+            "ms": 1809,
+            "bytes": 5223,
+            "preview": "\"Contents of https://github.com/modelcontextprotocol/servers:\\nThis repository is a collection of *r"
+          },
+          {
+            "method": "everything.echo",
+            "ok": true,
+            "ms": 1,
+            "bytes": 27,
+            "preview": "\"Echo: hello from codemode\""
+          }
+        ]
+      }
+    ],
+    "code": [
+      {
+        "ms": 2437,
+        "ok": true,
+        "bytes": 827,
+        "resultBytes": 286,
+        "error": null,
+        "upstreamMs": 2384,
+        "calls": [
+          {
+            "method": "time.get_current_time",
+            "ok": true,
+            "ms": 6
+          },
+          {
+            "method": "filesystem.read_text_file",
+            "ok": true,
+            "ms": 4
+          },
+          {
+            "method": "git.git_log",
+            "ok": true,
+            "ms": 85
+          },
+          {
+            "method": "sequential_thinking.sequentialthinking",
+            "ok": true,
+            "ms": 3
+          },
+          {
+            "method": "memory.create_entities",
+            "ok": true,
+            "ms": 4
+          },
+          {
+            "method": "memory.read_graph",
+            "ok": true,
+            "ms": 1
+          },
+          {
+            "method": "fetch.fetch",
+            "ok": true,
+            "ms": 2279
+          },
+          {
+            "method": "everything.echo",
+            "ok": true,
+            "ms": 2
+          }
+        ]
+      },
+      {
+        "ms": 2152,
+        "ok": true,
+        "bytes": 827,
+        "resultBytes": 286,
+        "error": null,
+        "upstreamMs": 2146,
+        "calls": [
+          {
+            "method": "time.get_current_time",
+            "ok": true,
+            "ms": 3
+          },
+          {
+            "method": "filesystem.read_text_file",
+            "ok": true,
+            "ms": 2
+          },
+          {
+            "method": "git.git_log",
+            "ok": true,
+            "ms": 85
+          },
+          {
+            "method": "sequential_thinking.sequentialthinking",
+            "ok": true,
+            "ms": 2
+          },
+          {
+            "method": "memory.create_entities",
+            "ok": true,
+            "ms": 4
+          },
+          {
+            "method": "memory.read_graph",
+            "ok": true,
+            "ms": 1
+          },
+          {
+            "method": "fetch.fetch",
+            "ok": true,
+            "ms": 2047
+          },
+          {
+            "method": "everything.echo",
+            "ok": true,
+            "ms": 2
+          }
+        ]
+      },
+      {
+        "ms": 2105,
+        "ok": true,
+        "bytes": 827,
+        "resultBytes": 286,
+        "error": null,
+        "upstreamMs": 2101,
+        "calls": [
+          {
+            "method": "time.get_current_time",
+            "ok": true,
+            "ms": 2
+          },
+          {
+            "method": "filesystem.read_text_file",
+            "ok": true,
+            "ms": 1
+          },
+          {
+            "method": "git.git_log",
+            "ok": true,
+            "ms": 85
+          },
+          {
+            "method": "sequential_thinking.sequentialthinking",
+            "ok": true,
+            "ms": 2
+          },
+          {
+            "method": "memory.create_entities",
+            "ok": true,
+            "ms": 5
+          },
+          {
+            "method": "memory.read_graph",
+            "ok": true,
+            "ms": 1
+          },
+          {
+            "method": "fetch.fetch",
+            "ok": true,
+            "ms": 2004
+          },
+          {
+            "method": "everything.echo",
+            "ok": true,
+            "ms": 1
+          }
+        ]
+      }
+    ]
+  }
+}

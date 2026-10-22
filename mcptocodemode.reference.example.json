@@ -1,0 +1,33 @@
+{
+  "mcpServers": {
+    "everything": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-everything@2.0.0"]
+    },
+    "filesystem": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem@2.0.0", "${CODEMODE_FS_ROOT}"]
+    },
+    "memory": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-memory@2.0.0"],
+      "env": { "MEMORY_FILE_PATH": "${CODEMODE_MEMORY_FILE}" }
+    },
+    "sequential-thinking": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-sequential-thinking@2.0.0"]
+    },
+    "time": {
+      "command": "uvx",
+      "args": ["--from", "mcp-server-time==2026.10.19", "mcp-server-time"]
+    },
+    "git": {
+      "command": "uvx",
+      "args": ["--from", "mcp-server-git==2026.10.19", "mcp-server-git", "--repository", "${CODEMODE_GIT_REPO}"]
+    },
+    "fetch": {
+      "command": "uvx",
+      "args": ["--from", "mcp-server-fetch==2026.10.19", "mcp-server-fetch"]
+    }
+  }
+}

@@ -1,0 +1,38 @@
+{
+  "name": "mcptocodemode",
+  "version": "0.1.0",
+  "description": "Turn any set of MCP servers into one Code Mode server: search, describe, execute.",
+  "type": "module",
+  "bin": {
+    "mcptocodemode": "./dist/cli.js"
+  },
+  "exports": {
+    ".": "./dist/index.js"
+  },
+  "files": [
+    "dist",
+    "SPEC.md",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "measure": "node scripts/measure.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.20.0",
+    "quickjs-emscripten": "^0.31.0",
+    "smol-toml": "^1.9.1",
+    "zod": "^3.25.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "typescript": "^5.9.0",
+    "vitest": "^3.2.0"
+  }
+}

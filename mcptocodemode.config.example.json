@@ -1,0 +1,13 @@
+{
+  "servers": [
+    {
+      "name": "notes",
+      "command": "node",
+      "args": ["dist/cli.js", "demo-upstream"]
+    }
+  ],
+  "limits": {
+    "timeoutMs": 30000,
+    "maxCalls": 100
+  }
+}
