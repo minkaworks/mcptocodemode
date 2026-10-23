@@ -4,17 +4,19 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { writeFile } from "node:fs/promises";
 import path from "node:path";
-import { createInterface } from "node:readline/promises";
 import { defaultCacheDir, fileCache } from "./cache.js";
 import { CodeMode, type CodeModeOptions } from "./codemode.js";
-import { configEntry, describeInstall, installServer, localNameOf, removeServer, saveServer, userConfigPath } from "./install.js";
+import { configEntry, installServer, localNameOf, removeServer, saveServer, userConfigPath } from "./install.js";
 import { openBrowser } from "./oauth.js";
-import { availableServer, RegistryClient } from "./registry.js";
+import { availableServer, isVendor, RegistryClient } from "./registry.js";
 import { loadConfigs } from "./config.js";
 import { readOnlyPolicy } from "./policy.js";
 import { discoverConfig } from "./discover.js";
 import { confirmInstall, createCodeModeServer } from "./server.js";
 import { runSetup } from "./setup.js";
+import { ui } from "./ui.js";
+import * as prompt from "@clack/prompts";
+import os from "node:os";
 import type { Limits } from "./types.js";
 import { login, logout, nestingDepth, SELF_NAME, UpstreamPool } from "./upstream.js";
 import { VERSION } from "./version.js";
@@ -237,39 +239,54 @@ function registryClient(options: { syncOnSearch?: boolean } = {}): RegistryClien
 
 async function find(query: string): Promise<void> {
   if (!query) throw new Error("usage: mcptocodemode find <words>");
+  const { bold, dim, green, cyan, inverse } = ui;
+  prompt.intro(inverse(bold(` ${commandName()} find ${query} `)));
   // A one-off search should not keep the process alive building the index. `index` does that.
   const registry = registryClient({ syncOnSearch: false });
-  if (await registry.hasIndex()) {
-    // Fetching what changed since the last sync takes a second.
-    await registry.sync().catch(() => undefined);
-  } else {
-    process.stderr.write(
-      `mcptocodemode: no local index yet, so this asks the registry directly, which can take 20 to 40 seconds. Run "${commandName()} index" once (about a minute) to make find instant.\n`,
-    );
-  }
+  const indexed = await registry.hasIndex();
+  const searching = prompt.spinner();
+  searching.start(indexed ? "Searching the MCP registry" : "Asking the MCP registry directly (no local index yet, 20 to 40 seconds)");
+  // Fetching what changed since the last sync takes a second.
+  if (indexed) await registry.sync().catch(() => undefined);
   const results = await registry.search(query, 10);
-  if (results.length === 0) process.stdout.write(`No registry servers match "${query}".\n`);
-  for (const item of results.map((server) => availableServer(server))) {
-    process.stdout.write(`${item.name} ${item.version}${item.publisher === "owner" ? "  (publisher owns the repository)" : ""}\n`);
-    if (item.description) process.stdout.write(`  ${item.description}\n`);
-    process.stdout.write(`  ${item.runs}\n`);
-    if (item.needs.length > 0) process.stdout.write(`  needs ${item.needs.join(", ")}${item.ready ? "" : " (not set)"}\n`);
+  searching.stop(results.length > 0 ? `${results.length} servers match "${query}"` : `No registry servers match "${query}"`);
+
+  const width = Math.max((process.stdout.columns ?? 100) - 4, 40);
+  for (const server of results) {
+    const item = availableServer(server);
+    const badge = isVendor(item.name, query) ? green("[vendor]") : item.publisher === "owner" ? cyan("[owns repo]") : "";
+    const how = item.kind === "oci" ? "docker" : item.kind;
+    const needs = item.needs.length > 0 ? ` · needs ${item.needs.join(", ")}${item.ready ? "" : " (not set)"}` : "";
+    process.stdout.write(`${dim("│")}\n${cyan("●")}  ${bold(item.name)}  ${dim(item.version)}${badge ? `  ${badge}` : ""}\n`);
+    if (item.description) process.stdout.write(`${dim("│")}  ${fit(item.description, width)}\n`);
+    process.stdout.write(`${dim("│")}  ${dim(fit(`${how} · ${item.runs}${needs}`, width))}\n`);
   }
+  if (!indexed) prompt.log.info(`Run ${cyan(`${commandName()} index`)} once (about a minute) and find answers instantly.`);
+  prompt.outro(results[0] ? `Install one: ${cyan(`${commandName()} add ${results[0].name}`)}` : "Try other words.");
+}
+
+/** Cut a line to the terminal width with an ellipsis. */
+function fit(text: string, width: number): string {
+  return text.length > width ? `${text.slice(0, width - 1)}…` : text;
 }
 
 /** Build or update the local registry index, with progress. */
 async function index(): Promise<void> {
+  const { bold, inverse } = ui;
+  prompt.intro(inverse(bold(` ${commandName()} index `)));
   const registry = registryClient();
   const fresh = !(await registry.hasIndex());
-  if (fresh) process.stderr.write("mcptocodemode: downloading the MCP registry, about 48,000 servers. This takes a few minutes.\n");
-  let last = Date.now();
-  const result = await registry.sync((count) => {
-    if (Date.now() - last > 5_000) {
-      process.stderr.write(`mcptocodemode: ${count} servers so far\n`);
-      last = Date.now();
-    }
-  });
-  process.stdout.write(result.full ? `Indexed ${result.servers} servers.\n` : `Index is up to date: ${result.servers} servers.\n`);
+  const progress = prompt.spinner();
+  progress.start(fresh ? "Downloading the MCP registry (about 48,000 servers)" : "Fetching what changed in the MCP registry");
+  try {
+    const result = await registry.sync((count) => progress.message(`${fresh ? "Downloading the MCP registry" : "Fetching changes"}: ${count.toLocaleString("en-US")} servers`));
+    progress.stop(result.full ? `Indexed ${result.servers.toLocaleString("en-US")} servers` : `Up to date: ${result.servers.toLocaleString("en-US")} servers`);
+  } catch (error) {
+    progress.error(error instanceof Error ? error.message : String(error));
+    process.exitCode = 1;
+    return;
+  }
+  prompt.outro(`Search it: ${ui.cyan(`${commandName()} find <words>`)}`);
 }
 
 function commandName(): string {
@@ -279,40 +296,69 @@ function commandName(): string {
 /** Save a registry server to the user config after a person confirms in the terminal. Nothing runs yet. */
 async function add(name: string | undefined): Promise<void> {
   if (!name || name.startsWith("--")) throw new Error("usage: mcptocodemode add <registry name> [--yes]");
+  const { bold, dim, green, cyan, inverse } = ui;
+  prompt.intro(inverse(bold(` ${commandName()} add ${name} `)));
+  const looking = prompt.spinner();
+  looking.start("Looking it up in the MCP registry");
   const server = await registryClient().get(name);
-  if (!server) throw new Error(`No server named "${name}" in the registry. Try: mcptocodemode find <words>`);
+  if (!server) {
+    looking.error(`No server named "${name}" in the registry`);
+    prompt.outro(`Search for one: ${cyan(`${commandName()} find <words>`)}`);
+    process.exitCode = 1;
+    return;
+  }
+  looking.stop(`${bold(server.name)} ${dim(server.version)}`);
   const option = server.install.find((item) => item.needs.every((need) => process.env[need.name] !== undefined)) ?? server.install[0];
   if (!option) throw new Error(`${name} has no package or remote mcptocodemode can run.`);
   const file = userConfigPath();
-  process.stdout.write(`${describeInstall(server, option, file)}\n`);
+  const localName = localNameOf(server.name);
+  const namespace = server.name.split("/")[0];
+  const publisher =
+    server.publisher === "owner" && server.repository
+      ? `${namespace}, which also owns ${server.repository.replace(/^https?:\/\//, "")}`
+      : `${namespace}${server.repository ? dim(`  (repository ${server.repository.replace(/^https?:\/\//, "")}, not verified as theirs)`) : ""}`;
+  const reads = option.needs.map((need) => `${need.name}${process.env[need.name] === undefined ? dim(" (not set)") : green(" (set)")}`);
+  prompt.note(
+    [
+      `${dim("Publisher")}  ${publisher}`,
+      `${dim(option.kind === "remote" ? "Connects " : "Runs     ")}  ${cyan(option.display)}`,
+      ...(reads.length > 0 ? [`${dim("Reads    ")}  ${reads.join(", ")}`] : []),
+      ...(option.optional?.length ? [`${dim("Optional ")}  ${option.optional.join(", ")}`] : []),
+      `${dim("Saved as ")}  "${localName}" in ${file.replace(os.homedir(), "~")}`,
+    ].join("\n"),
+    "What gets saved",
+  );
   if (!process.argv.includes("--yes")) {
-    const prompt = createInterface({ input: process.stdin, output: process.stdout });
-    const answer = await prompt.question("Save it? [y/N] ");
-    prompt.close();
-    if (!/^y(es)?$/i.test(answer.trim())) {
-      process.stdout.write("Nothing saved.\n");
+    const ok = await prompt.confirm({ message: "Save it?" });
+    if (prompt.isCancel(ok) || !ok) {
+      prompt.cancel("Nothing saved.");
       return;
     }
   }
-  await saveServer(file, localNameOf(server.name), configEntry(server, option));
-  process.stdout.write(`Saved as "${localNameOf(server.name)}" in ${file}. Restart your agent to load it.\n`);
-  if (option.kind === "remote" && option.needs.length === 0) {
-    process.stdout.write(`If it asks you to sign in, run: npx mcptocodemode login ${localNameOf(server.name)}\n`);
-  }
+  await saveServer(file, localName, configEntry(server, option));
+  prompt.log.success(`Saved as "${localName}"`);
+  const next = ["Restart your agent to load it."];
+  if (option.kind === "remote" && option.needs.length === 0) next.push(`If it asks you to sign in: ${cyan(`${commandName()} login ${localName}`)}`);
   const missing = option.needs.filter((need) => process.env[need.name] === undefined).map((need) => need.name);
-  if (missing.length > 0) {
-    process.stdout.write(`Set ${missing.join(", ")} in the environment your agent starts mcptocodemode with. The config reads ${missing.map((item) => `\${${item}}`).join(", ")}.\n`);
-  }
+  if (missing.length > 0) next.push(`Set ${missing.join(", ")} where your agent starts mcptocodemode. The config reads ${missing.map((item) => `\${${item}}`).join(", ")}.`);
+  prompt.outro(next.join("\n   "));
 }
 
 /** Take a server out of the config `add` writes, and forget its sign-in. */
 async function remove(name: string | undefined): Promise<void> {
   if (!name || name.startsWith("--")) throw new Error("usage: mcptocodemode remove <server>");
+  prompt.intro(ui.inverse(ui.bold(` ${commandName()} remove ${name} `)));
   const file = userConfigPath();
   const entry = await removeServer(file, name);
-  if (!entry) throw new Error(`No server named "${name}" in ${file}. remove only edits the servers add saved.`);
+  if (!entry) {
+    prompt.log.error(`No server named "${name}" in ${file.replace(os.homedir(), "~")}. remove only edits the servers add saved.`);
+    prompt.outro("Nothing changed.");
+    process.exitCode = 1;
+    return;
+  }
   if (typeof entry.url === "string") logout({ name, transport: "http", url: entry.url });
-  process.stdout.write(`Removed ${name} from ${file}${typeof entry.url === "string" ? " and forgot its sign-in" : ""}. Restart your agent to drop it.\n`);
+  prompt.log.success(`Removed ${name}${typeof entry.url === "string" ? " and forgot its sign-in" : ""}`);
+  prompt.outro("Restart your agent to drop it.");
 }
 
 /** The configured server called `name`, from --config or discovery. */
@@ -329,25 +375,31 @@ async function configuredServer(name: string) {
 
 async function signIn(kind: "login" | "logout", name: string | undefined): Promise<void> {
   if (!name || name.startsWith("--")) throw new Error(`usage: mcptocodemode ${kind} <server>`);
+  prompt.intro(ui.inverse(ui.bold(` ${commandName()} ${kind} ${name} `)));
   const spec = await configuredServer(name);
   if (kind === "logout") {
     logout(spec);
-    process.stdout.write(`Forgot the sign-in for ${name}.\n`);
+    prompt.outro(`Forgot the sign-in for ${name}.`);
     return;
   }
   const port = flag("--port");
-  const result = await login(spec, {
-    port: port ? Number(port) : undefined,
-    open: (url) => {
-      process.stdout.write(`Opening your browser to sign in to ${name}. If it does not open, visit:\n${url}\n`);
-      openBrowser(url);
-    },
-  });
-  process.stdout.write(
-    result.alreadySignedIn
-      ? `Already signed in to ${name}. ${result.tools} tools.\n`
-      : `Signed in to ${name}. ${result.tools} tools. Restart your agent to use it.\n`,
-  );
+  const waiting = prompt.spinner();
+  waiting.start(`Connecting to ${spec.url}`);
+  try {
+    const result = await login(spec, {
+      port: port ? Number(port) : undefined,
+      open: (url) => {
+        waiting.message("Waiting for you to sign in in the browser");
+        prompt.log.info(`If the browser does not open, visit:\n${url}`);
+        openBrowser(url);
+      },
+    });
+    waiting.stop(result.alreadySignedIn ? `Already signed in · ${result.tools} tools` : `Signed in · ${result.tools} tools`);
+    prompt.outro(result.alreadySignedIn ? "Nothing to do." : "Restart your agent to use it.");
+  } catch (error) {
+    waiting.error(error instanceof Error ? error.message : String(error));
+    process.exitCode = 1;
+  }
 }
 
 async function inspect(kind: "sdk" | "list"): Promise<void> {

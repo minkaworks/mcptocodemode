@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Changed
+
+- `find`, `add`, `index`, `login`, `logout`, and `remove` use the same framed output as `setup`. `find` shows each server as a block with a `[vendor]` or `[owns repo]` tag, how it runs, and what it needs, cut to the terminal width. `add` shows what gets saved and asks with the same Yes/No prompt. `index` shows its progress in place.
+
 ## [0.4.0] - 2026-10-22
 
 ### Added

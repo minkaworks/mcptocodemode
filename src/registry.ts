@@ -331,6 +331,12 @@ function entries(body: unknown): RegistryServer[] {
   return [...byName.values()];
 }
 
+/** True when the publisher is the brand a query names: com.supabase or io.github.supabase for "supabase". */
+export function isVendor(name: string, query: string): boolean {
+  const label = publisherLabel((name.split("/")[0] ?? "").toLowerCase());
+  return queryWords(query.toLowerCase()).includes(label);
+}
+
 function queryWords(query: string): string[] {
   return query.split(/[^a-z0-9]+/).filter((word) => word.length > 1);
 }
