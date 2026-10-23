@@ -8,13 +8,14 @@ import { createInterface } from "node:readline/promises";
 import { defaultCacheDir, fileCache } from "./cache.js";
 import { CodeMode, type CodeModeOptions } from "./codemode.js";
 import { configEntry, describeInstall, installServer, localNameOf, saveServer, userConfigPath } from "./install.js";
+import { openBrowser } from "./oauth.js";
 import { availableServer, RegistryClient } from "./registry.js";
 import { loadConfigs } from "./config.js";
 import { readOnlyPolicy } from "./policy.js";
 import { discoverConfig } from "./discover.js";
 import { confirmInstall, createCodeModeServer } from "./server.js";
 import type { Limits } from "./types.js";
-import { nestingDepth, SELF_NAME, UpstreamPool } from "./upstream.js";
+import { login, logout, nestingDepth, SELF_NAME, UpstreamPool } from "./upstream.js";
 import { VERSION } from "./version.js";
 
 const command = process.argv[2];
@@ -29,6 +30,8 @@ if (command === "demo-upstream") {
   await find(process.argv.slice(3).filter((arg) => !arg.startsWith("--")).join(" "));
 } else if (command === "add") {
   await add(process.argv[3]);
+} else if (command === "login" || command === "logout") {
+  await signIn(command, process.argv[3]);
 } else {
   process.stderr.write(
     [
@@ -37,6 +40,8 @@ if (command === "demo-upstream") {
       "mcptocodemode list [--config file ...]",
       "mcptocodemode find <words>",
       "mcptocodemode add <registry name> [--yes]",
+      "mcptocodemode login <server> [--port 33418]",
+      "mcptocodemode logout <server>",
       "mcptocodemode demo-upstream",
       "",
       "A config file is this project's JSON, standard mcpServers JSON, or [mcp_servers.*] TOML.",
@@ -48,6 +53,7 @@ if (command === "demo-upstream") {
       "list connects to every server and refreshes the cache.",
       "--registry lets search list servers from the MCP registry and the code install one after you confirm.",
       "find searches the MCP registry. add saves one of its servers to your config, after you confirm.",
+      "login signs in to a remote server with OAuth in your browser. serve then uses that sign-in.",
       "",
     ].join("\n"),
   );
@@ -234,10 +240,48 @@ async function add(name: string | undefined): Promise<void> {
   }
   await saveServer(file, localNameOf(server.name), configEntry(server, option));
   process.stdout.write(`Saved as "${localNameOf(server.name)}" in ${file}. Restart your agent to load it.\n`);
+  if (option.kind === "remote" && option.needs.length === 0) {
+    process.stdout.write(`If it asks you to sign in, run: npx mcptocodemode login ${localNameOf(server.name)}\n`);
+  }
   const missing = option.needs.filter((need) => process.env[need.name] === undefined).map((need) => need.name);
   if (missing.length > 0) {
     process.stdout.write(`Set ${missing.join(", ")} in the environment your agent starts mcptocodemode with. The config reads ${missing.map((item) => `\${${item}}`).join(", ")}.\n`);
   }
+}
+
+/** The configured server called `name`, from --config or discovery. */
+async function configuredServer(name: string) {
+  const configPaths = flags("--config");
+  if (configPaths.length === 0 && process.env.CODEMODE_CONFIG) configPaths.push(process.env.CODEMODE_CONFIG);
+  const servers = configPaths.length > 0 ? (await loadConfigs(configPaths)).servers : (await discoverConfig()).servers;
+  const spec = servers.find((server) => server.name === name);
+  if (!spec) {
+    throw new Error(`No configured server named "${name}". Configured: ${servers.map((server) => server.name).join(", ") || "none"}`);
+  }
+  return spec;
+}
+
+async function signIn(kind: "login" | "logout", name: string | undefined): Promise<void> {
+  if (!name || name.startsWith("--")) throw new Error(`usage: mcptocodemode ${kind} <server>`);
+  const spec = await configuredServer(name);
+  if (kind === "logout") {
+    logout(spec);
+    process.stdout.write(`Forgot the sign-in for ${name}.\n`);
+    return;
+  }
+  const port = flag("--port");
+  const result = await login(spec, {
+    port: port ? Number(port) : undefined,
+    open: (url) => {
+      process.stdout.write(`Opening your browser to sign in to ${name}. If it does not open, visit:\n${url}\n`);
+      openBrowser(url);
+    },
+  });
+  process.stdout.write(
+    result.alreadySignedIn
+      ? `Already signed in to ${name}. ${result.tools} tools.\n`
+      : `Signed in to ${name}. ${result.tools} tools. Restart your agent to use it.\n`,
+  );
 }
 
 async function inspect(kind: "sdk" | "list"): Promise<void> {

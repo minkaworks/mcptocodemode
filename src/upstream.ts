@@ -1,3 +1,4 @@
+import { UnauthorizedError } from "@modelcontextprotocol/sdk/client/auth.js";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { SSEClientTransport } from "@modelcontextprotocol/sdk/client/sse.js";
 import { getDefaultEnvironment, StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
@@ -9,6 +10,7 @@ import { findServer, namespaceWithIdent } from "./catalog.js";
 import { uniqueIdent } from "./ident.js";
 import type { ServerSpec } from "./config.js";
 import type { Catalog, JsonSchema, ListedTool, ServerNamespace, ToolCall } from "./types.js";
+import { callbackUrl, DEFAULT_CALLBACK_PORT, FileOAuthProvider, openBrowser, waitForCallback } from "./oauth.js";
 import { VERSION } from "./version.js";
 
 type ContentBlock = {
@@ -66,6 +68,8 @@ export type PoolOptions = {
    * False leaves a cached server unlaunched until code calls it.
    */
   prewarm?: boolean;
+  /** Where `login` keeps sign-ins for remote servers. Defaults to `~/.config/mcptocodemode/oauth`. */
+  oauthDir?: string;
   /** Called for each connect failure, including one that happens on a first call. */
   onFailure?: (failure: ConnectFailure) => void;
 };
@@ -96,6 +100,7 @@ export class UpstreamPool {
   private readonly depth: number;
   private readonly cache?: CatalogCache;
   private readonly onFailure?: (failure: ConnectFailure) => void;
+  private readonly oauthDir?: string;
   private closed = false;
   /** Idents taken so far, including servers added after start. */
   private readonly usedIdents = new Set<string>();
@@ -105,6 +110,7 @@ export class UpstreamPool {
     this.depth = nestingDepth(options.env ?? process.env) + 1;
     this.cache = options.cache;
     this.onFailure = options.onFailure;
+    this.oauthDir = options.oauthDir;
     // A spec already known to be this server is not launched again.
     const kept = specs.filter((spec) => !this.cache?.isSelf(spec));
     this.entries = kept.map((spec, index) => ({ spec, ident: uniqueIdent(spec.name, this.usedIdents), index }));
@@ -159,7 +165,7 @@ export class UpstreamPool {
     } catch (error) {
       // A server that never connected is not kept around as a failed namespace.
       this.drop(entry);
-      throw new Error(`${spec.name} did not connect: ${publicError(error)}`);
+      throw new Error(`${spec.name} did not connect: ${publicError(error)}`, { cause: error });
     }
     const namespace = this.catalog.servers[entry.index];
     if (!namespace) throw new Error(`${spec.name} left the pool while connecting`);
@@ -211,7 +217,7 @@ export class UpstreamPool {
 
   /** Connect once. Later calls share the same attempt, successful or not. */
   private open(entry: Entry): Promise<Session> {
-    entry.session ??= connectOne(entry.spec, this.timeoutMs, this.depth).then(
+    entry.session ??= connectOne(entry.spec, this.timeoutMs, this.depth, this.oauthDir).then(
       async (session) => {
         if (this.closed) {
           await session.client.close().catch(() => undefined);
@@ -259,7 +265,7 @@ export function childEnv(spec: ServerSpec, depth: number): Record<string, string
   return { ...getDefaultEnvironment(), ...spec.env, [DEPTH_ENV]: String(depth) };
 }
 
-async function connectOne(spec: ServerSpec, timeoutMs: number, depth: number): Promise<Session> {
+async function connectOne(spec: ServerSpec, timeoutMs: number, depth: number, oauthDir?: string): Promise<Session> {
   const client = new Client({ name: "mcptocodemode", version: VERSION });
   let timer: ReturnType<typeof setTimeout> | undefined;
   const deadline = new Promise<never>((_, reject) => {
@@ -268,7 +274,7 @@ async function connectOne(spec: ServerSpec, timeoutMs: number, depth: number): P
   try {
     const tools = await Promise.race([
       (async () => {
-        await client.connect(openTransport(spec, depth));
+        await client.connect(openTransport(spec, depth, oauthDir));
         if (client.getServerVersion()?.name === SELF_NAME) {
           throw new SelfReferenceError(`${spec.name} is mcptocodemode itself`);
         }
@@ -285,7 +291,7 @@ async function connectOne(spec: ServerSpec, timeoutMs: number, depth: number): P
   }
 }
 
-function openTransport(spec: ServerSpec, depth: number): Transport {
+function openTransport(spec: ServerSpec, depth: number, oauthDir?: string): Transport {
   if (spec.transport === "stdio") {
     if (!spec.command) throw new Error(`Server "${spec.name}" needs a command`);
     return new StdioClientTransport({
@@ -295,11 +301,81 @@ function openTransport(spec: ServerSpec, depth: number): Transport {
       cwd: spec.cwd,
     });
   }
+  return remoteTransport(spec, signedInProvider(spec, oauthDir));
+}
+
+/**
+ * A remote server uses the sign-in `mcptocodemode login` saved, unless its
+ * config already sends an Authorization header. With no saved sign-in, a
+ * server that asks for one fails with NeedsLoginError instead of opening a
+ * browser.
+ */
+function signedInProvider(spec: ServerSpec, dir?: string): FileOAuthProvider | undefined {
+  if (!spec.url) return undefined;
+  if (Object.keys(spec.headers ?? {}).some((name) => name.toLowerCase() === "authorization")) return undefined;
+  return new FileOAuthProvider({ serverName: spec.name, serverUrl: spec.url, dir });
+}
+
+function remoteTransport(spec: ServerSpec, authProvider?: FileOAuthProvider): SSEClientTransport | StreamableHTTPClientTransport {
   if (!spec.url) throw new Error(`Server "${spec.name}" needs a url`);
   const url = new URL(spec.url);
   const requestInit = spec.headers ? { headers: spec.headers } : undefined;
-  if (spec.transport === "sse") return new SSEClientTransport(url, { requestInit });
-  return new StreamableHTTPClientTransport(url, { requestInit });
+  if (spec.transport === "sse") return new SSEClientTransport(url, { requestInit, authProvider });
+  return new StreamableHTTPClientTransport(url, { requestInit, authProvider });
+}
+
+export type LoginOptions = {
+  /** Where sign-ins are kept. Defaults to `~/.config/mcptocodemode/oauth`. */
+  dir?: string;
+  port?: number;
+  /** Opens the authorization page. Defaults to the system browser. */
+  open?: (url: URL) => void | Promise<void>;
+  timeoutMs?: number;
+};
+
+/**
+ * Sign in to one remote MCP server with OAuth and keep the result, so `serve`
+ * can connect to it. Returns how many tools the server lists once signed in.
+ */
+export async function login(spec: ServerSpec, options: LoginOptions = {}): Promise<{ tools: number; alreadySignedIn: boolean }> {
+  if (spec.transport === "stdio" || !spec.url) throw new Error(`${spec.name} runs on this machine. There is nothing to sign in to.`);
+  const port = options.port ?? DEFAULT_CALLBACK_PORT;
+  const provider = new FileOAuthProvider({
+    serverName: spec.name,
+    serverUrl: spec.url,
+    dir: options.dir,
+    redirectUrl: callbackUrl(port),
+    onAuthorize: options.open ?? openBrowser,
+  });
+  const callback = waitForCallback(port, () => provider.lastState, options.timeoutMs ?? 5 * 60_000);
+  try {
+    await callback.ready;
+    const countTools = async (transport: SSEClientTransport | StreamableHTTPClientTransport) => {
+      const client = new Client({ name: "mcptocodemode", version: VERSION });
+      await client.connect(transport);
+      try {
+        return (await listAllTools(client)).length;
+      } finally {
+        await client.close().catch(() => undefined);
+      }
+    };
+    const first = remoteTransport(spec, provider);
+    try {
+      return { tools: await countTools(first), alreadySignedIn: true };
+    } catch (error) {
+      if (!(error instanceof UnauthorizedError)) throw error;
+    }
+    await first.finishAuth(await callback.code);
+    return { tools: await countTools(remoteTransport(spec, provider)), alreadySignedIn: false };
+  } finally {
+    callback.close();
+  }
+}
+
+/** Forget the sign-in kept for one remote server. */
+export function logout(spec: ServerSpec, options: { dir?: string } = {}): void {
+  if (!spec.url) throw new Error(`${spec.name} runs on this machine. There is no sign-in to forget.`);
+  new FileOAuthProvider({ serverName: spec.name, serverUrl: spec.url, dir: options.dir }).clear();
 }
 
 async function listAllTools(client: Client): Promise<ListedTool[]> {

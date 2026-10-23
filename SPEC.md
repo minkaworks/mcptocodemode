@@ -221,7 +221,7 @@ await codemode.install("io.github.acme/notes");
 return await notes.list();
 ```
 
-The host saves the server so the next session has it. A saved entry refers to variables as `${NAME}` and never contains their values. A server needs its variables set in the host's environment. A remote server that requires an OAuth sign-in does not connect in this implementation.
+The host saves the server so the next session has it. A saved entry refers to variables as `${NAME}` and never contains their values. A server needs its variables set in the host's environment. A remote server that requires an OAuth sign-in is saved too, and the error names the sign-in command.
 
 ## Host
 
@@ -232,6 +232,8 @@ A host may run read-only. It then sends only calls to methods whose server marks
 A server is configured as a stdio command or a URL. The URL transport is streamable HTTP unless the config says `sse`. Legacy SSE remains part of the protocol, so a conforming host accepts it.
 
 The host reads servers from the caller's config. It accepts `{ servers: [...] }`, standard `{ mcpServers: { ... } }`, a `servers` object map, and `[mcp_servers.name]` TOML. `enabled: false` skips a server. Servers from later files replace earlier servers with the same name.
+
+A remote server may require an OAuth sign-in. This implementation signs in outside the session, with `mcptocodemode login`, and keeps the client registration and tokens in a file only the user can read. During a session it uses those tokens and refreshes them. It does not register a client or start a sign-in itself. A server that needs one fails to connect with a message that names the command.
 
 Connecting is per server. One failed handshake does not drop the others. The failure is visible from `search` and from `describe`. A host may give up on a server that does not answer in time. That counts as a failed handshake.
 

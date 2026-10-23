@@ -1,6 +1,7 @@
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import { NeedsLoginError } from "./oauth.js";
 import type { InstallOption, RegistryServer } from "./registry.js";
 import type { ServerNamespace } from "./types.js";
 
@@ -52,7 +53,19 @@ export async function installServer(name: string, context: InstallContext): Prom
   const request: InstallRequest = { server, option, localName, message: describeInstall(server, option, context.savedTo) };
   if (!(await context.confirm(request))) throw new Error(`Installing ${name} was declined.`);
 
-  const namespace = await context.connect(option.spec(localName, env));
+  let namespace: ServerNamespace;
+  try {
+    namespace = await context.connect(option.spec(localName, env));
+  } catch (error) {
+    // A remote server that wants an OAuth sign-in is saved anyway, so `login` can find it by name.
+    if ((error as { cause?: unknown }).cause instanceof NeedsLoginError) {
+      await context.persist?.(localName, configEntry(server, option));
+      throw new Error(
+        `${server.name} is saved as "${localName}" and needs you to sign in. Run: npx mcptocodemode login ${localName}, then restart the agent.`,
+      );
+    }
+    throw error;
+  }
   await context.persist?.(localName, configEntry(server, option));
   return {
     server: namespace.ident,

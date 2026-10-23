@@ -154,7 +154,13 @@ npx -y mcptocodemode add io.github.github/github-mcp-server
 
 Start `serve` with `--registry` and the model can do the same in the conversation. `search` then also lists `available` servers, and the program can call `await codemode.install("io.github.acme/notes")`. Your agent shows you what would run and asks you to confirm; nothing runs until you say yes. The server connects without a restart and the program can use it on the next line. Searching sends the query to the registry only while the local index is being built, which is why `--registry` is off by default.
 
-Remote servers that need an OAuth sign-in are listed but do not connect yet.
+### Remote servers with sign-in
+
+```bash
+npx -y mcptocodemode login notion
+```
+
+Remote servers such as Notion, Linear, or Atlassian ask for an OAuth sign-in. `login` opens your browser, catches the redirect on `127.0.0.1:33418`, and keeps the result in `~/.config/mcptocodemode/oauth/`, readable only by you. `serve` then connects with it and refreshes it as needed. `serve` never opens a browser or registers a client on its own: a server that needs a sign-in fails with the exact `login` command, in `search` and in the error the code sees. `logout <server>` forgets it. A server whose config already sends an `Authorization` header does not use any of this.
 
 ## Library
 

@@ -23,6 +23,8 @@ In scope:
 - Guest code reaching the network, the filesystem, or process credentials other than by a tool call the host dispatched.
 - A log, an error, or a tool result that reveals a credential the process was given.
 - One connected server being treated as another server's namespace.
+- OAuth tokens or client registrations kept by `mcptocodemode login` being readable by another user, sent to a server other than the one they were issued for, or written to a log.
+- `serve` opening a browser, registering an OAuth client, or launching a registry server without a person confirming it.
 
 Out of scope:
 

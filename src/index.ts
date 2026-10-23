@@ -27,6 +27,15 @@ export { searchCatalog } from "./search.js";
 export { confirmInstall, createCodeModeServer, type CodeModeServerOptions } from "./server.js";
 export { readOnlyPolicy, type ReadOnlyOptions } from "./policy.js";
 export {
+  callbackUrl,
+  DEFAULT_CALLBACK_PORT,
+  defaultOAuthDir,
+  FileOAuthProvider,
+  NeedsLoginError,
+  oauthFile,
+  type FileOAuthOptions,
+} from "./oauth.js";
+export {
   availableServer,
   DEFAULT_REGISTRY_URL,
   RegistryClient,
@@ -56,6 +65,9 @@ export {
   SELF_NAME,
   SelfReferenceError,
   UpstreamPool,
+  login,
+  logout,
+  type LoginOptions,
   callUpstreamTool,
   childEnv,
   nestingDepth,
