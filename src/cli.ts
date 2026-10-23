@@ -104,7 +104,7 @@ async function openPool(kind: "serve" | "sdk" | "list"): Promise<{ pool: Upstrea
     const cached = waiting > 0 ? `, ${waiting} from cache` : "";
     process.stderr.write(`mcptocodemode: ${pool.connected.length} connected${cached}, ${toolCount} tools\n`);
   });
-  const mode = new CodeMode(pool.catalog, (call) => pool.call(call, limits.maxResultChars), { limits });
+  const mode: CodeMode = new CodeMode(pool.catalog, (call) => pool.call(call, limits.maxResultChars, mode.blobs), { limits });
   return { pool, mode };
 }
 
@@ -120,6 +120,7 @@ async function serve(): Promise<void> {
   const server = createCodeModeServer(mode, { ready: pool.ready });
   const transport = new StdioServerTransport();
   const shutdown = async () => {
+    mode.close();
     await pool.close();
     process.exit(0);
   };
@@ -157,6 +158,7 @@ async function inspect(kind: "sdk" | "list"): Promise<void> {
       process.stdout.write(typescript);
     }
   } finally {
+    mode.close();
     await pool.close();
   }
 }

@@ -12,7 +12,8 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
-import { CodeMode, createCodeModeServer, loadConfig, UpstreamPool } from "../dist/index.js";
+import { callUpstreamTool, CodeMode, createCodeModeServer, loadConfig, namespaceWithIdent, UpstreamPool } from "../dist/index.js";
+import { createMailServer, mailExpected, mailPrompt } from "./fixtures/mail-server.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 if (existsSync(path.join(root, ".env"))) process.loadEnvFile(path.join(root, ".env"));
@@ -53,6 +54,12 @@ const tasks = [
     check: (answer) => answer.paid === 19 && Math.abs(answer.total - 1906.81) < 0.005,
   },
   {
+    // BENCH_TASKS=mail. Paginated search, a large body, and an image passed to another tool.
+    id: "mail",
+    prompt: mailPrompt,
+    check: (answer) => JSON.stringify(answer) === JSON.stringify(mailExpected),
+  },
+  {
     id: "mixed",
     prompt: `Using the tools: what is the subject line of the most recent commit in the git repository ${gitRepo}, and what is the exact text in ${fsRoot}/hello.txt without its trailing newline? Reply as {"commit": string, "hello": string}.`,
     check: (answer) => answer.commit === "demo" && answer.hello === "hello from the filesystem server",
@@ -62,14 +69,30 @@ const tasks = [
 const config = await loadConfig(path.join(root, "mcptocodemode.reference.example.json"));
 process.stderr.write("connecting\n");
 const pool = await UpstreamPool.connect(config.servers);
-const mode = new CodeMode(pool.catalog, (call) => pool.call(call, config.limits.maxResultChars), { limits: config.limits });
+
+// The mail fixture runs in this process. Both arms see it next to the reference servers.
+const mailServer = createMailServer();
+const [mailClientTransport, mailServerTransport] = InMemoryTransport.createLinkedPair();
+const mailClient = new Client({ name: "bench-mail", version: "0" });
+await Promise.all([mailClient.connect(mailClientTransport), mailServer.connect(mailServerTransport)]);
+const mailTools = (await mailClient.listTools()).tools;
+const catalog = { servers: [...pool.catalog.servers, namespaceWithIdent("mail", "mail", mailTools)] };
+
+const mode = new CodeMode(
+  catalog,
+  (call) =>
+    call.server === "mail"
+      ? callUpstreamTool(mailClient, call.tool, call.input, config.limits.maxResultChars, mode.blobs)
+      : pool.call(call, config.limits.maxResultChars, mode.blobs),
+  { limits: config.limits },
+);
 const mcp = createCodeModeServer(mode);
 const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
 const codeClient = new Client({ name: "bench", version: "0" });
 await Promise.all([codeClient.connect(clientTransport), mcp.connect(serverTransport)]);
 
 const arms = {
-  plain: plainArm(pool),
+  plain: plainArm(pool, mailClient, mailTools),
   codemode: await codeModeArm(codeClient),
 };
 
@@ -93,6 +116,9 @@ try {
 } finally {
   await codeClient.close();
   await mcp.close();
+  mode.close();
+  await mailClient.close();
+  await mailServer.close();
   await pool.close();
 }
 
@@ -110,7 +136,7 @@ writeFileSync(path.join(root, "experiments", "model-bench.json"), `${JSON.string
 printSummary(report.summary);
 
 /** Every upstream tool as a function, the way a client that forwards them all presents them. */
-function plainArm(upstream) {
+function plainArm(upstream, mail, mailToolList) {
   const byName = new Map();
   const tools = [];
   for (const server of upstream.catalog.servers) {
@@ -122,11 +148,18 @@ function plainArm(upstream) {
       tools.push(fn(name, tool.description, tool.inputSchema));
     }
   }
+  for (const tool of mailToolList) {
+    const name = `mail__${tool.name}`;
+    byName.set(name, { mail: tool.name });
+    tools.push(fn(name, tool.description, tool.inputSchema));
+  }
   return {
     tools,
     async call(name, input) {
       const target = byName.get(name);
       if (!target) throw new Error(`Unknown tool ${name}`);
+      // A plain client hands the model the content blocks, image data included.
+      if (target.mail) return JSON.stringify((await mail.callTool({ name: target.mail, arguments: input })).content);
       return JSON.stringify(await upstream.call({ ...target, input }, config.limits.maxResultChars));
     },
   };
@@ -137,6 +170,8 @@ async function codeModeArm(client) {
   const listed = await client.listTools();
   return {
     tools: listed.tools.map((tool) => fn(tool.name, tool.description, tool.inputSchema)),
+    // Each run starts from an empty session, as a new conversation would.
+    reset: () => mode.execute("return null;", { reset: true }),
     async call(name, input) {
       const result = await client.callTool({ name, arguments: input });
       return result.content?.map((block) => block.text ?? "").join("\n") ?? "";
@@ -149,6 +184,7 @@ function fn(name, description, parameters) {
 }
 
 async function runTask(model, task, arm) {
+  await arm.reset?.();
   const messages = [
     { role: "system", content: SYSTEM },
     { role: "user", content: task.prompt },

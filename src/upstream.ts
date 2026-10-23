@@ -3,6 +3,7 @@ import { SSEClientTransport } from "@modelcontextprotocol/sdk/client/sse.js";
 import { getDefaultEnvironment, StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import type { Transport } from "@modelcontextprotocol/sdk/shared/transport.js";
+import type { BlobStore } from "./blobs.js";
 import type { CatalogCache } from "./cache.js";
 import { findServer, namespaceWithIdent } from "./catalog.js";
 import { uniqueIdent } from "./ident.js";
@@ -13,6 +14,8 @@ import { VERSION } from "./version.js";
 type ContentBlock = {
   type: string;
   text?: string;
+  /** Base64 of an image or audio block. */
+  data?: string;
   mimeType?: string;
   resource?: { text?: string; uri?: string; mimeType?: string; blob?: string };
   uri?: string;
@@ -148,7 +151,8 @@ export class UpstreamPool {
     return this.entries.filter((entry) => entry.client).map((entry) => entry.spec.name);
   }
 
-  async call(call: ToolCall, maxResultChars: number): Promise<unknown> {
+  /** With `blobs`, images, audio, and resource blobs come back as handles instead of `omitted`. */
+  async call(call: ToolCall, maxResultChars: number, blobs?: BlobStore): Promise<unknown> {
     const namespace = findServer(this.catalog, call.server);
     const entry = this.entries.find((item) => item.ident === namespace?.ident);
     if (!namespace || !entry) throw new Error(`No upstream server named "${call.server}"`);
@@ -159,10 +163,10 @@ export class UpstreamPool {
     } catch (error) {
       throw new Error(`${namespace.ident} did not connect: ${publicError(error)}`);
     }
-    if (PROTOCOL.has(call.method)) return callProtocol(session.client, call, maxResultChars);
+    if (PROTOCOL.has(call.method)) return callProtocol(session.client, call, maxResultChars, blobs);
     const tool = session.tools.find((item) => item.name === call.tool);
     if (!tool) throw new Error(`${namespace.ident} has no tool "${call.tool}"`);
-    return callUpstreamTool(session.client, tool.name, call.input, maxResultChars);
+    return callUpstreamTool(session.client, tool.name, call.input, maxResultChars, blobs);
   }
 
   async close(): Promise<void> {
@@ -296,7 +300,7 @@ async function listAllTools(client: Client): Promise<ListedTool[]> {
   return tools;
 }
 
-async function callProtocol(client: Client, call: ToolCall, maxResultChars: number): Promise<unknown> {
+async function callProtocol(client: Client, call: ToolCall, maxResultChars: number, blobs?: BlobStore): Promise<unknown> {
   if (call.method === "resources.list") {
     const resources = await everyPage(async (cursor) => {
       const page = await client.listResources(cursor ? { cursor } : undefined);
@@ -332,7 +336,7 @@ async function callProtocol(client: Client, call: ToolCall, maxResultChars: numb
     const uri = call.input.uri;
     if (typeof uri !== "string" || uri.length === 0) throw new Error("resources.read expects { uri: string }");
     const result = await client.readResource({ uri });
-    return cap(slimContents(result.contents), maxResultChars);
+    return cap(slimContents(result.contents, blobs), maxResultChars);
   }
   if (call.method === "prompts.list") {
     const prompts = await everyPage(async (cursor) => {
@@ -391,8 +395,9 @@ async function everyPage<T>(read: (cursor?: string) => Promise<{ items: T[]; nex
   return items;
 }
 
-function slimContents(
+export function slimContents(
   contents: Array<{ uri: string; mimeType?: string; text?: string } | { uri: string; mimeType?: string; blob: string }>,
+  blobs?: BlobStore,
 ): unknown {
   const mapped = contents.map((item) => {
     if ("text" in item && typeof item.text === "string") {
@@ -402,6 +407,9 @@ function slimContents(
         text: parseMaybeJson(item.text),
       };
     }
+    // The handle sits under `blob` so the object can be passed on as it is.
+    const handle = "blob" in item ? blobs?.put(item.blob, "blob", item.mimeType ?? "application/octet-stream") : undefined;
+    if (handle) return { uri: item.uri, ...(item.mimeType ? { mimeType: item.mimeType } : {}), blob: handle };
     return {
       uri: item.uri,
       ...(item.mimeType ? { mimeType: item.mimeType } : {}),
@@ -449,12 +457,18 @@ export async function callUpstreamTool(
   toolName: string,
   input: Record<string, unknown>,
   maxResultChars: number,
+  blobs?: BlobStore,
 ): Promise<unknown> {
   const result = (await client.callTool({ name: toolName, arguments: input })) as ToolResult;
-  return valueFromToolResult(result, maxResultChars);
+  return valueFromToolResult(result, maxResultChars, blobs);
 }
 
-export function valueFromToolResult(result: ToolResult, maxResultChars: number): unknown {
+/**
+ * The value code sees for a tool result. `structuredContent` wins as it is.
+ * Otherwise image and audio blocks become handles in `blobs` when they fit,
+ * and `{ type, mimeType, omitted: true }` when they do not or there is no store.
+ */
+export function valueFromToolResult(result: ToolResult, maxResultChars: number, blobs?: BlobStore): unknown {
   if (result.isError) {
     throw new Error(textOf(result.content) || "Tool call failed");
   }
@@ -462,20 +476,22 @@ export function valueFromToolResult(result: ToolResult, maxResultChars: number):
   if (result.toolResult !== undefined && result.content === undefined) {
     return cap(result.toolResult, maxResultChars);
   }
-  return cap(contentValue(result.content ?? []), maxResultChars);
+  return cap(contentValue(result.content ?? [], blobs), maxResultChars);
 }
 
-function contentValue(blocks: ContentBlock[]): unknown {
+function contentValue(blocks: ContentBlock[], blobs?: BlobStore): unknown {
   if (blocks.length === 0) return null;
   const first = blocks[0];
-  if (blocks.length === 1 && first) return blockValue(first);
-  return blocks.map((block) => blockValue(block));
+  if (blocks.length === 1 && first) return blockValue(first, blobs);
+  return blocks.map((block) => blockValue(block, blobs));
 }
 
-function blockValue(block: ContentBlock): unknown {
+function blockValue(block: ContentBlock, blobs?: BlobStore): unknown {
   if (block.type === "text") return parseMaybeJson(block.text ?? "");
   if (block.type === "image" || block.type === "audio") {
-    return { type: block.type, mimeType: block.mimeType ?? "application/octet-stream", omitted: true };
+    const mimeType = block.mimeType ?? "application/octet-stream";
+    const handle = typeof block.data === "string" ? blobs?.put(block.data, block.type, mimeType) : undefined;
+    return handle ?? { type: block.type, mimeType, omitted: true };
   }
   if (block.type === "resource" && block.resource?.text !== undefined) return block.resource.text;
   return { type: block.type };

@@ -51,6 +51,7 @@ const RESERVED = new Set([
   "NaN",
   "Infinity",
   "codemode",
+  "state",
   "console",
   "globalThis",
   "constructor",

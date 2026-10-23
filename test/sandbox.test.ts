@@ -54,7 +54,11 @@ describe("sandbox", () => {
     expect(result.ok).toBe(true);
     expect(result.result).toEqual(["Whole milk.", "Three tools."]);
     expect(result.logs).toEqual(["loaded 2"]);
-    expect(result.calls.map((call) => call.method)).toEqual(["list", "get", "get"]);
+    // A run where everything succeeded reports one entry per method.
+    expect(result.calls.map(({ method, ...rest }) => ({ method, count: "count" in rest ? rest.count : 0 }))).toEqual([
+      { method: "list", count: 1 },
+      { method: "get", count: 2 },
+    ]);
     expect(result.calls.every((call) => !("input" in call))).toBe(true);
   });
 
@@ -87,7 +91,8 @@ describe("sandbox", () => {
     const result = await mode().execute(`return await notes.get({ id: "missing" });`);
     expect(result.ok).toBe(false);
     expect(result.error).toContain("No note missing");
-    expect(result.calls[0]?.ok).toBe(false);
+    // A failed run keeps one entry per call.
+    expect(result.calls[0]).toMatchObject({ method: "get", ok: false });
   });
 
   it("stops a tight loop at the deadline", async () => {
@@ -144,5 +149,64 @@ describe("sandbox", () => {
     expect(timedOut.ok).toBe(false);
     await new Promise((resolve) => setTimeout(resolve, 80));
     expect(await slow.execute(`return "still alive";`)).toMatchObject({ ok: true, result: "still alive" });
+  });
+});
+
+describe("session", () => {
+  it("keeps state across runs but not let or const", async () => {
+    const runtime = mode();
+    expect(await runtime.execute(`state.n = 1; let local = 5; globalThis.seen = true; return state.n;`)).toMatchObject({ ok: true, result: 1 });
+    expect(await runtime.execute(`state.n += 1; return [state.n, typeof local, seen];`)).toMatchObject({
+      ok: true,
+      result: [2, "undefined", true],
+    });
+    runtime.close();
+  });
+
+  it("starts empty after reset", async () => {
+    const runtime = mode();
+    await runtime.execute(`state.n = 1; return null;`);
+    expect(await runtime.execute(`return state.n ?? "empty";`, { reset: true })).toMatchObject({ ok: true, result: "empty" });
+    runtime.close();
+  });
+
+  it("clears the session after a timeout", async () => {
+    const runtime = mode();
+    await runtime.execute(`state.n = 1; return null;`);
+    const timedOut = await runtime.execute(`while (true) {}`, { timeoutMs: 100 });
+    expect(timedOut.ok).toBe(false);
+    expect(timedOut.error).toBe("Execution timed out. The session was cleared.");
+    expect(await runtime.execute(`return state.n ?? "empty";`)).toMatchObject({ ok: true, result: "empty" });
+    runtime.close();
+  });
+
+  it("refuses a second execute while one is running", async () => {
+    let release = () => {};
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const runtime = new CodeMode(mode().catalog, async () => {
+      await gate;
+      return [];
+    });
+    const first = runtime.execute(`state.ran = true; return await notes.list();`);
+    const second = await runtime.execute(`state.ran = "second"; return 2;`);
+    expect(second).toEqual({ ok: false, error: "Another execute is still running.", logs: [], calls: [] });
+    release();
+    expect(await first).toMatchObject({ ok: true, result: [] });
+    expect(await runtime.execute(`return state.ran;`)).toMatchObject({ ok: true, result: true });
+    runtime.close();
+  });
+
+  it("binds a server that joined the catalog after the first run", async () => {
+    const runtime = mode();
+    expect(await runtime.execute(`return typeof calendar;`)).toMatchObject({ result: "undefined" });
+    runtime.catalog.servers.push(
+      ...catalogFromServers([{ name: "calendar", tools: [{ name: "today", inputSchema: { type: "object", properties: {} } }] }]).servers,
+    );
+    expect(await runtime.execute(`return [typeof calendar.today, typeof notes.get];`)).toMatchObject({
+      result: ["function", "function"],
+    });
+    runtime.close();
   });
 });

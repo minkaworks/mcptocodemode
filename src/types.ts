@@ -65,12 +65,21 @@ export type CallTrace = {
   ms: number;
 };
 
+/** A successful run's trace: one entry per method, with the call count and the time summed. */
+export type CallSummary = {
+  server: string;
+  method: string;
+  count: number;
+  ms: number;
+};
+
 export type ExecuteResult = {
   ok: boolean;
   result?: unknown;
   error?: string;
   logs: string[];
-  calls: CallTrace[];
+  /** Summed per method when the run and every call succeeded, one entry per call otherwise. */
+  calls: CallTrace[] | CallSummary[];
 };
 
 export type SearchHit = {
@@ -100,4 +109,4 @@ export const defaultLimits: Limits = {
   maxResultChars: 200_000,
 };
 
-export const PROTOCOL_VERSION = "0.1";
+export const PROTOCOL_VERSION = "0.2";

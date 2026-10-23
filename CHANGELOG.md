@@ -6,6 +6,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Changed
+
+- `execute` keeps one sandbox isolate for the session instead of a fresh one per call. `let` and `const` still end with each run. The `state` global, and anything else on `globalThis`, carries over, so one run can store threads and the next can filter them. A server named `state` becomes `state_`.
+- When a run and all its calls succeed, `calls` has one entry per method with `count` and the summed `ms`. A failed run keeps one entry per call.
+- The `execute` description asks for one program that looks methods up with `codemode.search` and `codemode.describe`, calls them, filters, and keeps on `state` what the next run needs. `search` no longer tells the model to `describe` before every `execute`. The three tool definitions are 2,996 bytes.
+- `PROTOCOL_VERSION` is `0.2`.
+
+### Added
+
+- `execute` takes `reset: true` to start from an empty session. A run that times out, runs out of memory, or is interrupted also clears the session, and its error ends with `The session was cleared.`
+- A second `execute` while one is running returns `Another execute is still running.` and leaves the session alone.
+- Images, audio, and resource blobs from tools without `structuredContent` stay in the host as `{ $handle, type, mimeType }`. Passing that object in another call's arguments sends the base64 to that tool. The bytes never enter the sandbox, `logs`, `calls`, or the result. Handles last for the session, up to 8 MiB each and 32 MiB in all; past that the value is `omitted: true` as before.
+- `CodeMode.close()`, `CodeMode.blobs`, `SandboxSession`, and `BlobStore` for library users. `UpstreamPool.call` and `valueFromToolResult` take the blob store.
+- [REPORT.md](REPORT.md) has a Mail section from `scripts/measure-mail.mjs`: paginated search, large bodies, and an image passed between tools. `scripts/bench-model.mjs` has the same task as `BENCH_TASKS=mail`.
+
 ### Fixed
 
 - An array of a union type renders as `(A | B)[]` instead of `A | B[]`.

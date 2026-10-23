@@ -43,6 +43,13 @@ describe("MCP surface", () => {
     expect(annotations.search?.readOnlyHint).toBe(true);
     expect(annotations.describe?.readOnlyHint).toBe(true);
     expect(annotations.execute).toMatchObject({ readOnlyHint: false, destructiveHint: true });
+    const execute = listed.tools.find((tool) => tool.name === "execute");
+    expect(execute?.description).toContain("state");
+    expect(execute?.description).toContain("codemode.search");
+    expect(Object.keys((execute?.inputSchema as { properties: object }).properties)).toContain("reset");
+    // The three definitions stay small however many servers connect.
+    const definitions = listed.tools.map(({ name, description, inputSchema }) => ({ name, description, inputSchema }));
+    expect(Buffer.byteLength(JSON.stringify(definitions))).toBeLessThan(4_000);
 
     const found = await client.callTool({ name: "search", arguments: { query: "labels" } });
     expect(JSON.stringify(found)).toContain("list_labels");

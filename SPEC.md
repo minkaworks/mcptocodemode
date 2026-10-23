@@ -1,4 +1,4 @@
-# MCPtoCodeMode 0.1
+# MCPtoCodeMode 0.2
 
 MCPtoCodeMode is a way to use many MCP servers through three tools. The model writes JavaScript. The code runs in a sandbox whose only way out is the upstream MCP servers.
 
@@ -80,12 +80,13 @@ Describing a server that did not connect returns the connect error and no method
   "required": ["code"],
   "properties": {
     "code": { "type": "string" },
-    "timeout_ms": { "type": "integer", "minimum": 1 }
+    "timeout_ms": { "type": "integer", "minimum": 1 },
+    "reset": { "type": "boolean" }
   }
 }
 ```
 
-`code` is either an async function body or a function expression. Both of these are valid:
+`code` is one program that looks up what it needs, calls it, reduces the results, and returns the answer. It is either an async function body or a function expression. Both of these are valid:
 
 ```js
 const rows = await notes.list();
@@ -99,37 +100,97 @@ async () => {
 }
 ```
 
-The result is JSON:
+`reset: true` replaces the session's isolate before the code runs. See [Session](#session).
+
+The result is JSON. When the run succeeds and every call in it succeeded, `calls` has one entry per method, with the number of calls and their summed time:
 
 ```json
 {
   "ok": true,
-  "result": ["1", "2"],
+  "result": ["Buy milk", "Ship codemode"],
   "logs": [],
-  "calls": [{ "server": "notes", "method": "list", "ok": true, "ms": 40 }]
+  "calls": [
+    { "server": "notes", "method": "list", "count": 1, "ms": 4 },
+    { "server": "notes", "method": "get", "count": 2, "ms": 9 }
+  ]
 }
 ```
 
-`calls` records the server, the method, whether it succeeded, and how long it took. It does not record arguments or payloads. Those stay in the sandbox unless the code returns them.
+When the run fails, or any call in it failed, `calls` has one entry per call, in completion order:
 
-On failure, `ok` is false and `error` is a string. A failed call fails the run unless the code catches it.
+```json
+{
+  "ok": false,
+  "error": "No note 9",
+  "logs": [],
+  "calls": [
+    { "server": "notes", "method": "list", "ok": true, "ms": 4 },
+    { "server": "notes", "method": "get", "ok": false, "ms": 3 }
+  ]
+}
+```
+
+Neither form records arguments or payloads. Those stay in the sandbox unless the code returns them.
+
+On failure, `ok` is false and `error` is a string. A failed call fails the run unless the code catches it. A second `execute` that arrives while one is running returns `{ "ok": false, "error": "Another execute is still running." }` and does not touch the session.
 
 ## Sandbox
 
-Each `execute` gets a fresh JavaScript isolate.
-
-Inside it:
+Inside the isolate:
 
 - One global per connected upstream server. The global's name is the server name sanitized to an identifier (`google-calendar` becomes `google_calendar`). A server that did not connect has no global.
 - Each upstream tool is a method. The method name is the tool name sanitized the same way. Hyphens become underscores. Collisions get a numeric suffix.
 - `resources` and `prompts` are reserved on every server. A tool with one of those names is suffixed (`resources_2`).
 - A method takes one object argument and returns a Promise. No required fields means the argument may be omitted.
 - `codemode.search(query, options?)` and `codemode.describe(target)` do the same work as the outer tools, and their results stay in the sandbox.
+- `state` is an object the host creates. It survives between runs of the same session.
 - `console.log`, `console.info`, `console.warn`, and `console.error` append to `logs`.
 
 The isolate has no network, filesystem, process, or environment. It cannot see credentials. Upstream calls go back to the host, and the host is what talks to MCP.
 
-A run stops when the code finishes, the deadline passes, the tool-call budget is spent, or the memory limit is hit. The default budgets in this implementation are 30 seconds, 100 calls, 64 MiB, and 100,000 characters of code. Results larger than 200,000 characters of JSON are replaced with a truncation marker before they re-enter the sandbox.
+A run stops when the code finishes, the deadline passes, the tool-call budget is spent, or the memory limit is hit. The default budgets in this implementation are 30 seconds, 100 calls, and 100,000 characters of code per run, and 64 MiB of memory for the session. The call budget and the logs start over with each run. Results larger than 200,000 characters of JSON are replaced with a truncation marker before they re-enter the sandbox.
+
+### Session
+
+A session is one isolate kept across `execute` calls. In this implementation it is one `CodeMode`, which for `serve` means the process and its one client. Nothing is written to disk.
+
+Each run's code is wrapped in its own async function, so `let`, `const`, and function declarations end with the run. The `state` global survives, and so does any other property the code puts on `globalThis`:
+
+```js
+state.threads = await gmail.search_threads({ query: "newer_than:7d" });
+return state.threads.length;
+```
+
+```js
+return state.threads.filter((thread) => thread.unread).length;
+```
+
+The second run sees the threads the first one stored.
+
+`reset: true` replaces the isolate before the code runs. A run that times out, hits the memory limit, or is interrupted also replaces it, and its error ends with `The session was cleared.` The next run starts with an empty `state`.
+
+A server that connects after a run is bound before the next one. Binding adds missing servers and methods. It does not replace a global the code already defined under that name. A server whose name sanitizes to `state` is suffixed (`state_`).
+
+### Handles
+
+An image or audio block, or a resource blob, that has no `structuredContent` around it stays in the host. The code receives a handle:
+
+```json
+{ "$handle": "blob_5f1c0a9e2b7d4c13", "type": "image", "mimeType": "image/png" }
+```
+
+A resource blob from `resources.read` comes back as `{ "uri": "...", "mimeType": "...", "blob": { "$handle": "...", "type": "blob", "mimeType": "..." } }`.
+
+When the code passes an object whose only keys are `$handle` and, optionally, `type` and `mimeType` anywhere in a method's argument, the host replaces it with the base64 bytes before the call goes upstream:
+
+```js
+const image = await mail.get_attachment({ id: "att-7" });
+return await search.index_attachment({ file: image });
+```
+
+The bytes never enter the isolate, `logs`, `calls`, or the result. A handle that comes back in the result is just the handle. An unknown handle fails that call.
+
+Handles belong to the session and end with it. In this implementation one blob may hold up to 8 MiB and the session up to 32 MiB. Past either limit the value is `{ "type": "image", "mimeType": "image/png", "omitted": true }`, with no handle.
 
 ## Protocol methods
 
@@ -145,7 +206,7 @@ Every connected server exposes the same MCP features, not only tools:
 
 `arguments` values are strings, matching the MCP prompt schema. The host does not call these during connect. A server that does not implement one returns its own error when the code calls it.
 
-Resource text is returned. Resource blobs, images, and audio are not copied into the sandbox. The code receives an object with `omitted: true` instead.
+Resource text is returned. Resource blobs, images, and audio are not copied into the sandbox. The code receives a handle, or an object with `omitted: true` when there is no room. See [Handles](#handles).
 
 ## Host
 

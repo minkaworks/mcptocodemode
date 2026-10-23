@@ -25,6 +25,7 @@ const executeInput = {
       "JavaScript run in a sandbox. Write an async function body, or a function such as `async () => { ... }`. Each server is a global. Return only the value you need.",
     ),
   timeout_ms: z.number().int().positive().optional().describe("Wall-clock limit for this run."),
+  reset: z.boolean().optional().describe("Start from an empty session: no state, no globals, no handles."),
 };
 
 export type CodeModeServerOptions = {
@@ -53,7 +54,7 @@ export function createCodeModeServer(mode: CodeMode, options: CodeModeServerOpti
     {
       title: "Search tools",
       description:
-        "Find tools on the upstream MCP servers by keyword. The response lists every configured server and a few matches (server, method, required arguments, one line). The top matches include their TypeScript signature, so execute can often follow directly. Every server also has resources.list, resources.read, resources.templates, prompts.list, and prompts.get. Call describe before using an unfamiliar method, then execute.",
+        "Find methods on the upstream MCP servers by keyword. Lists every configured server and a few matches; the top ones include their TypeScript signature. Every server also has resources.list, resources.read, resources.templates, prompts.list, and prompts.get. execute can do the same lookup itself with codemode.search.",
       inputSchema: searchInput,
       annotations: READ_ONLY,
     },
@@ -72,7 +73,7 @@ export function createCodeModeServer(mode: CodeMode, options: CodeModeServerOpti
     {
       title: "Describe a tool",
       description:
-        'Return the TypeScript signature for one server or one method. Pass "notes" for the namespace, "notes.get" for a tool, or "notes.resources.read" for a protocol method. The first dot separates the server from the method. Read this before calling a method you have not used.',
+        'Return the TypeScript signature for one server or one method: "notes", "notes.get", or "notes.resources.read". The first dot separates the server from the method. Inside execute, codemode.describe does the same.',
       inputSchema: describeInput,
       annotations: READ_ONLY,
     },
@@ -95,20 +96,21 @@ export function createCodeModeServer(mode: CodeMode, options: CodeModeServerOpti
     {
       title: "Execute code",
       description: [
-        "Run JavaScript in a fresh sandbox. No network, filesystem, or credentials.",
-        "Each upstream server is a global: `await notes.get({ id: \"1\" })`, `await notes.resources.read({ uri })`, `await notes.prompts.get({ name })`.",
-        "codemode.search(query) and codemode.describe(target) work inside the sandbox.",
-        "The code is an async function body, or a function expression. Return only the final value, computed in the code: filter, count, and slice there.",
-        "A method resolves to the value in its signature, not to this tool's { ok, result } envelope. When the signature says Promise<unknown>, inspect a small sample (Object.keys, a slice) before returning anything large.",
-        "Independent calls run concurrently with Promise.all.",
-        "console.log is captured and returned with the result. Intermediate tool payloads stay in the sandbox.",
+        "Run one JavaScript program that finds the methods it needs, calls them, filters, and returns only the answer. No network, filesystem, or credentials.",
+        "Each upstream server is a global: `await notes.get({ id: \"1\" })`. Look methods up inside the program with `await codemode.search(\"query\")` and `await codemode.describe(\"server.method\")`.",
+        "The code is an async function body. A method resolves to the value in its signature; when that is Promise<unknown>, sample it before returning anything large. Independent calls run concurrently with Promise.all.",
+        "let and const do not survive between runs. Put what the next run needs on `state`:",
+        "run 1 `state.threads = await gmail.search_threads({ query: \"newer_than:7d\" }); return state.threads.length;`",
+        "run 2 `return state.threads.filter((thread) => thread.unread).length;`",
+        "Images and binary results arrive as { $handle, type, mimeType }. Pass that object to another tool and it receives the bytes.",
+        "reset: true starts an empty session. console.log output is returned.",
       ].join(" "),
       inputSchema: executeInput,
       annotations: RUNS_UPSTREAM_TOOLS,
     },
-    async ({ code, timeout_ms }) => {
+    async ({ code, timeout_ms, reset }) => {
       await ready;
-      return jsonResult(await mode.execute(code, { timeoutMs: timeout_ms }));
+      return jsonResult(await mode.execute(code, { timeoutMs: timeout_ms, reset }));
     },
   );
 

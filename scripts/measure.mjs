@@ -7,6 +7,7 @@ import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { CodeMode, createCodeModeServer, loadConfig, UpstreamPool } from "../dist/index.js";
+import { measureMail } from "./measure-mail.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const fsRoot = process.env.CODEMODE_FS_ROOT ?? "/tmp/mcptocodemode-demo";
@@ -30,7 +31,7 @@ const startup = await measureStartup();
 const config = await loadConfig(path.join(root, "mcptocodemode.reference.example.json"));
 process.stderr.write("connecting\n");
 const pool = await UpstreamPool.connect(config.servers);
-const mode = new CodeMode(pool.catalog, (call) => pool.call(call, config.limits.maxResultChars), {
+const mode = new CodeMode(pool.catalog, (call) => pool.call(call, config.limits.maxResultChars, mode.blobs), {
   limits: config.limits,
 });
 
@@ -91,6 +92,8 @@ try {
   report.scaling = scaling(pool.catalog, report.prompt.codeMode.bytes, report.prompt.inlineSdk.executeToolBytes);
   report.tasks.bigFile = await compare(pool, mode, bigFileTask(), config.limits.maxResultChars);
   report.tasks.fanOut = await compare(pool, mode, fanOutTask(), config.limits.maxResultChars);
+  process.stderr.write("mail\n");
+  report.mail = await measureMail();
 
   const task = buildTask(helloPath, gitRepo);
   for (let i = 0; i < runs; i += 1) {
@@ -105,6 +108,7 @@ try {
   writeFileSync(out, `${JSON.stringify(report, null, 2)}\n`);
   process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);
 } finally {
+  mode.close();
   await pool.close();
 }
 
@@ -270,7 +274,8 @@ async function compare(pool, mode, task, maxResultChars) {
     reread += running;
   }
   const codeStarted = performance.now();
-  const result = await mode.execute(task.code);
+  // Each task starts from an empty session.
+  const result = await mode.execute(task.code, { reset: true });
   const codeMs = elapsed(codeStarted);
   if (!result.ok) throw new Error(`${task.name}: ${result.error}`);
   const envelope = jsonBytes({ ok: result.ok, result: result.result, logs: result.logs, calls: result.calls });
@@ -282,7 +287,7 @@ async function compare(pool, mode, task, maxResultChars) {
       codeBytes: Buffer.byteLength(task.code),
       envelopeBytes: envelope,
       answerBytes: jsonBytes(result.result),
-      upstreamCalls: result.calls.length,
+      upstreamCalls: callCount(result.calls),
       ms: codeMs,
     },
     answer: result.result,
@@ -400,7 +405,7 @@ async function timeDirect(pool, task, maxResultChars) {
 
 async function timeCode(mode, code) {
   const started = performance.now();
-  const result = await mode.execute(code);
+  const result = await mode.execute(code, { reset: true });
   const payload = { ok: result.ok, result: result.result, error: result.error, logs: result.logs, calls: result.calls };
   return {
     ms: elapsed(started),
@@ -409,13 +414,19 @@ async function timeCode(mode, code) {
     resultBytes: jsonBytes(result.result ?? null),
     error: result.error ?? null,
     upstreamMs: result.calls.reduce((sum, call) => sum + call.ms, 0),
-    calls: result.calls.map((call) => ({ method: `${call.server}.${call.method}`, ok: call.ok, ms: call.ms })),
+    upstreamCalls: callCount(result.calls),
+    calls: result.calls.map((call) => ({ method: `${call.server}.${call.method}`, count: call.count ?? 1, ok: call.ok ?? true, ms: call.ms })),
   };
 }
 
 function packed(value) {
   const json = JSON.stringify(value) ?? "null";
   return { bytes: Buffer.byteLength(json), preview: json.slice(0, 100) };
+}
+
+/** A successful run's trace is summed per method. */
+function callCount(calls) {
+  return calls.reduce((sum, call) => sum + (call.count ?? 1), 0);
 }
 
 function jsonBytes(value) {

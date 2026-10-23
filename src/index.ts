@@ -6,6 +6,7 @@ export {
   findTool,
   namespaceWithIdent,
 } from "./catalog.js";
+export { BlobStore, defaultBlobLimits, type BlobHandle, type BlobLimits } from "./blobs.js";
 export { CodeMode, type CodeModeOptions } from "./codemode.js";
 export {
   expandText,
@@ -20,7 +21,7 @@ export {
 } from "./config.js";
 export { discoverConfig, type DiscoverResult } from "./discover.js";
 export { describeTarget, renderSdk } from "./describe.js";
-export { wrapCode, runInSandbox } from "./sandbox.js";
+export { OVERLAP_ERROR, SandboxSession, wrapCode, runInSandbox, type SessionOptions } from "./sandbox.js";
 export { schemaToType } from "./schema.js";
 export { searchCatalog } from "./search.js";
 export { createCodeModeServer, type CodeModeServerOptions } from "./server.js";
@@ -36,6 +37,7 @@ export {
   childEnv,
   nestingDepth,
   publicError,
+  slimContents,
   valueFromToolResult,
   type ConnectFailure,
   type PoolOptions,
@@ -44,6 +46,7 @@ export { VERSION } from "./version.js";
 export {
   PROTOCOL_VERSION,
   defaultLimits,
+  type CallSummary,
   type CallTrace,
   type Catalog,
   type Dispatcher,

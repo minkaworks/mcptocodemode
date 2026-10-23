@@ -48,9 +48,10 @@ Without a model in the loop:
 
 | | Plain MCP | MCPtoCodeMode |
 | --- | ---: | ---: |
-| Tool definitions in every prompt | 31,179 bytes | **2,581 bytes**, however many servers you add |
+| Tool definitions in every prompt | 31,179 bytes | **2,996 bytes**, however many servers you add |
 | Count errors in a 2,000-line log: bytes back to the model | 129,977 | **402** |
-| Startup: first `search` answered, tools cached | 1,697 ms (v0.1.1) | **314 ms** |
+| Mail: count unread across 3 pages, pass a 150 KB image to another tool | 230,668 bytes back, 200,141 written out | **362 bytes** back |
+| Startup: first `search` answered, tools cached | 1,697 ms (v0.1.1) | **320 ms** |
 
 ## Use it
 
@@ -154,7 +155,7 @@ await mode.execute(`return await notes.get({ id: "1" });`);
 
 ## Limits and safety
 
-Each `execute` gets a fresh [QuickJS](https://github.com/quickjs-ng/quickjs) WebAssembly sandbox: 30 seconds, 100 tool calls, 64 MiB, and 100,000 characters of code. Tool results over 200,000 characters come back truncated. Images, audio, and binary resources are not copied in.
+The code runs in a [QuickJS](https://github.com/quickjs-ng/quickjs) WebAssembly isolate that lasts for the session: `let` and `const` end with each run, but `state` carries over, so one run can store threads and the next can filter them. `reset: true` starts an empty session, and so does a run that times out. Each run gets 30 seconds, 100 tool calls, and 100,000 characters of code; the session gets 64 MiB. Tool results over 200,000 characters come back truncated. Images, audio, and binary resources stay in the host as `{ $handle, type, mimeType }`, which the code can pass to another tool without the bytes ever entering the sandbox or the model's context.
 
 The sandbox limits what the code can reach. It does not limit what a tool does: a tool that sends an email still sends it. Use `beforeCall` to block methods that need a human.
 
