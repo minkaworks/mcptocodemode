@@ -128,6 +128,24 @@ export function userConfigPath(env: NodeJS.ProcessEnv = process.env, home = os.h
   return path.join(env.XDG_CONFIG_HOME || path.join(home, ".config"), "mcptocodemode", "servers.json");
 }
 
+/** Remove one server from an `mcpServers` file. Returns its entry, or undefined when it was not there. */
+export async function removeServer(file: string, localName: string): Promise<Record<string, unknown> | undefined> {
+  let config: { mcpServers?: Record<string, Record<string, unknown>> } & Record<string, unknown>;
+  try {
+    config = JSON.parse(await readFile(file, "utf8")) as typeof config;
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return undefined;
+    throw new Error(`Could not read ${file}: ${(error as Error).message}`);
+  }
+  const entry = config.mcpServers?.[localName];
+  if (!entry || !config.mcpServers) return undefined;
+  delete config.mcpServers[localName];
+  const temp = `${file}.${process.pid}.tmp`;
+  await writeFile(temp, `${JSON.stringify(config, null, 2)}\n`, { mode: 0o600 });
+  await rename(temp, file);
+  return entry;
+}
+
 /** Add or replace one server in an `mcpServers` file, keeping everything else in it. */
 export async function saveServer(file: string, localName: string, entry: Record<string, unknown>): Promise<void> {
   let config: { mcpServers?: Record<string, unknown> } & Record<string, unknown> = {};

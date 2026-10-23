@@ -170,7 +170,7 @@ Start `serve` with `--registry` and the model can do the same in the conversatio
 npx -y mcptocodemode login notion
 ```
 
-Remote servers such as Notion, Linear, or Atlassian ask for an OAuth sign-in. `login` opens your browser, catches the redirect on `127.0.0.1:33418`, and keeps the result in `~/.config/mcptocodemode/oauth/`, readable only by you. `serve` then connects with it and refreshes it as needed. `serve` never opens a browser or registers a client on its own: a server that needs a sign-in fails with the exact `login` command, in `search` and in the error the code sees. `logout <server>` forgets it. A server whose config already sends an `Authorization` header does not use any of this.
+Remote servers such as Notion, Linear, or Atlassian ask for an OAuth sign-in. `login` opens your browser, catches the redirect on `127.0.0.1:33418`, and keeps the result in `~/.config/mcptocodemode/oauth/`, readable only by you. `serve` then connects with it and refreshes it as needed. `serve` never opens a browser or registers a client on its own: a server that needs a sign-in fails with the exact `login` command, in `search` and in the error the code sees. `logout <server>` forgets it, and `remove <server>` takes a saved server out of your config along with its sign-in. A server whose config already sends an `Authorization` header does not use any of this.
 
 ## Library
 

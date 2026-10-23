@@ -51,6 +51,7 @@ export {
   describeInstall,
   installServer,
   localNameOf,
+  removeServer,
   saveServer,
   userConfigPath,
   type InstallContext,

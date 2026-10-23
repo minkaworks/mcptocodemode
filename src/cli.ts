@@ -7,7 +7,7 @@ import path from "node:path";
 import { createInterface } from "node:readline/promises";
 import { defaultCacheDir, fileCache } from "./cache.js";
 import { CodeMode, type CodeModeOptions } from "./codemode.js";
-import { configEntry, describeInstall, installServer, localNameOf, saveServer, userConfigPath } from "./install.js";
+import { configEntry, describeInstall, installServer, localNameOf, removeServer, saveServer, userConfigPath } from "./install.js";
 import { openBrowser } from "./oauth.js";
 import { availableServer, RegistryClient } from "./registry.js";
 import { loadConfigs } from "./config.js";
@@ -30,6 +30,8 @@ if (command === "demo-upstream") {
   await find(process.argv.slice(3).filter((arg) => !arg.startsWith("--")).join(" "));
 } else if (command === "add") {
   await add(process.argv[3]);
+} else if (command === "remove") {
+  await remove(process.argv[3]);
 } else if (command === "login" || command === "logout") {
   await signIn(command, process.argv[3]);
 } else {
@@ -42,6 +44,7 @@ if (command === "demo-upstream") {
       `${self} list [--config file ...]`,
       `${self} find <words>`,
       `${self} add <registry name> [--yes]`,
+      `${self} remove <server>`,
       `${self} login <server> [--port 33418]`,
       `${self} logout <server>`,
       `${self} demo-upstream`,
@@ -249,6 +252,16 @@ async function add(name: string | undefined): Promise<void> {
   if (missing.length > 0) {
     process.stdout.write(`Set ${missing.join(", ")} in the environment your agent starts mcptocodemode with. The config reads ${missing.map((item) => `\${${item}}`).join(", ")}.\n`);
   }
+}
+
+/** Take a server out of the config `add` writes, and forget its sign-in. */
+async function remove(name: string | undefined): Promise<void> {
+  if (!name || name.startsWith("--")) throw new Error("usage: mcptocodemode remove <server>");
+  const file = userConfigPath();
+  const entry = await removeServer(file, name);
+  if (!entry) throw new Error(`No server named "${name}" in ${file}. remove only edits the servers add saved.`);
+  if (typeof entry.url === "string") logout({ name, transport: "http", url: entry.url });
+  process.stdout.write(`Removed ${name} from ${file}${typeof entry.url === "string" ? " and forgot its sign-in" : ""}. Restart your agent to drop it.\n`);
 }
 
 /** The configured server called `name`, from --config or discovery. */

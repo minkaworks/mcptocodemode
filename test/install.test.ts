@@ -118,5 +118,16 @@ describe("install", () => {
     expect(localNameOf("com.stripe/mcp")).toBe("stripe");
     expect(localNameOf("io.github.acme/server")).toBe("acme");
   });
+
+  it("removes one saved server and leaves the rest", async () => {
+    const { removeServer } = await import("../src/install.js");
+    const file = path.join(await mkdtemp(path.join(tmpdir(), "codemode-config-")), "servers.json");
+    await saveServer(file, "notion", { type: "http", url: "https://mcp.notion.com/mcp" });
+    await saveServer(file, "linear", { type: "http", url: "https://mcp.linear.app/mcp" });
+    expect(await removeServer(file, "notion")).toEqual({ type: "http", url: "https://mcp.notion.com/mcp" });
+    expect(await removeServer(file, "notion")).toBeUndefined();
+    const left = JSON.parse(await readFile(file, "utf8")) as { mcpServers: Record<string, unknown> };
+    expect(Object.keys(left.mcpServers)).toEqual(["linear"]);
+  });
 });
 
