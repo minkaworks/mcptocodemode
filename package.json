@@ -1,6 +1,6 @@
 {
   "name": "mcptocodemode",
-  "version": "0.2.1",
+  "version": "0.3.0-rc.1",
   "description": "Stop flooding your agent's prompt with MCP tools: MCPtoCodeMode puts every MCP server behind 3 tools and a sandbox, for Codex, Claude Code, Cursor, Grok, OpenCode, Pi, or any MCP client.",
   "author": "dqniel",
   "keywords": [
