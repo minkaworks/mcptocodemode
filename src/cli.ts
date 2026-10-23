@@ -20,6 +20,15 @@ import { VERSION } from "./version.js";
 
 const command = process.argv[2];
 
+// A failed command prints one line, not a stack trace.
+process.on("uncaughtException", fail);
+process.on("unhandledRejection", fail);
+
+function fail(error: unknown): never {
+  process.stderr.write(`mcptocodemode: ${error instanceof Error ? error.message : String(error)}\n`);
+  process.exit(1);
+}
+
 if (command === "demo-upstream") {
   await serveDemo();
 } else if (command === "serve") {
@@ -28,6 +37,8 @@ if (command === "demo-upstream") {
   await inspect(command);
 } else if (command === "find") {
   await find(process.argv.slice(3).filter((arg) => !arg.startsWith("--")).join(" "));
+} else if (command === "index") {
+  await index();
 } else if (command === "add") {
   await add(process.argv[3]);
 } else if (command === "remove") {
@@ -36,13 +47,14 @@ if (command === "demo-upstream") {
   await signIn(command, process.argv[3]);
 } else {
   // Usage uses the name it was started as: mcptocodemode, or the cm alias.
-  const self = path.basename(process.argv[1] ?? "mcptocodemode").replace(/\.js$/, "") === "cm" ? "cm" : "mcptocodemode";
+  const self = commandName();
   process.stderr.write(
     [
       `${self} serve [--config file ...] [--no-cache] [--lazy] [--read-only [--allow server.method ...]] [--registry]`,
       `${self} sdk [--config file ...] [--out api.d.ts]`,
       `${self} list [--config file ...]`,
       `${self} find <words>`,
+      `${self} index`,
       `${self} add <registry name> [--yes]`,
       `${self} remove <server>`,
       `${self} login <server> [--port 33418]`,
@@ -57,7 +69,8 @@ if (command === "demo-upstream") {
       "--read-only refuses methods their server does not mark read-only. --allow makes an exception.",
       "list connects to every server and refreshes the cache.",
       "--registry lets search list servers from the MCP registry and the code install one after you confirm.",
-      "find searches the MCP registry. add saves one of its servers to your config, after you confirm.",
+      "find searches the MCP registry. index builds or updates its local copy, which makes find fast.",
+      "add saves a registry server to your config, after you confirm.",
       "login signs in to a remote server with OAuth in your browser. serve then uses that sign-in.",
       "",
     ].join("\n"),
@@ -203,18 +216,22 @@ async function serve(): Promise<void> {
 }
 
 /** A registry client with its local index in the cache directory. */
-function registryClient(): RegistryClient {
-  return new RegistryClient({ indexFile: path.join(defaultCacheDir(), "registry-index.json") });
+function registryClient(options: { syncOnSearch?: boolean } = {}): RegistryClient {
+  return new RegistryClient({ indexFile: path.join(defaultCacheDir(), "registry-index.json"), ...options });
 }
 
 async function find(query: string): Promise<void> {
   if (!query) throw new Error("usage: mcptocodemode find <words>");
-  const registry = registryClient();
-  if (!(await registry.hasIndex())) process.stderr.write("mcptocodemode: indexing the MCP registry the first time. This takes a few minutes.\n");
-  const result = await registry.sync((count) => {
-    if (count > 0 && count % 5000 === 0) process.stderr.write(`mcptocodemode: ${count} servers so far\n`);
-  });
-  if (result.full) process.stderr.write(`mcptocodemode: indexed ${result.servers} servers\n`);
+  // A one-off search should not keep the process alive building the index. `index` does that.
+  const registry = registryClient({ syncOnSearch: false });
+  if (await registry.hasIndex()) {
+    // Fetching what changed since the last sync takes a second.
+    await registry.sync().catch(() => undefined);
+  } else {
+    process.stderr.write(
+      `mcptocodemode: no local index yet, so this asks the registry directly, which can take 20 to 40 seconds. Run "${commandName()} index" once (about a minute) to make find instant.\n`,
+    );
+  }
   const results = await registry.search(query, 10);
   if (results.length === 0) process.stdout.write(`No registry servers match "${query}".\n`);
   for (const item of results.map((server) => availableServer(server))) {
@@ -223,6 +240,25 @@ async function find(query: string): Promise<void> {
     process.stdout.write(`  ${item.runs}\n`);
     if (item.needs.length > 0) process.stdout.write(`  needs ${item.needs.join(", ")}${item.ready ? "" : " (not set)"}\n`);
   }
+}
+
+/** Build or update the local registry index, with progress. */
+async function index(): Promise<void> {
+  const registry = registryClient();
+  const fresh = !(await registry.hasIndex());
+  if (fresh) process.stderr.write("mcptocodemode: downloading the MCP registry, about 48,000 servers. This takes a few minutes.\n");
+  let last = Date.now();
+  const result = await registry.sync((count) => {
+    if (Date.now() - last > 5_000) {
+      process.stderr.write(`mcptocodemode: ${count} servers so far\n`);
+      last = Date.now();
+    }
+  });
+  process.stdout.write(result.full ? `Indexed ${result.servers} servers.\n` : `Index is up to date: ${result.servers} servers.\n`);
+}
+
+function commandName(): string {
+  return path.basename(process.argv[1] ?? "mcptocodemode").replace(/\.js$/, "") === "cm" ? "cm" : "mcptocodemode";
 }
 
 /** Save a registry server to the user config after a person confirms in the terminal. Nothing runs yet. */

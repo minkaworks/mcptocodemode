@@ -68,7 +68,7 @@ describe("registry", () => {
   it("lists latest active servers, publisher-owned first, and turns each package into a launch spec", async () => {
     const { registry, seen } = client({ "/v0/servers?": body });
     const found = await registry.search("github", 10);
-    expect(seen[0]).toBe("https://registry.test/v0/servers?search=github&version=latest&limit=30");
+    expect(seen[0]).toBe("https://registry.test/v0/servers?search=github&version=latest&limit=50");
     expect(found.map((server) => server.name)).toEqual([
       "io.github.github/github-mcp-server",
       "io.github.someone/github-mcp-server",
@@ -111,7 +111,7 @@ describe("registry", () => {
 
   it("gives up on a registry that does not answer", async () => {
     const registry = new RegistryClient({
-      timeoutMs: 50,
+      searchTimeoutMs: 50,
       fetch: ((_url: string, init?: RequestInit) =>
         new Promise((_resolve, reject) => init?.signal?.addEventListener("abort", () => reject(new Error("aborted"))))) as typeof fetch,
     });

@@ -81,8 +81,10 @@ export type RegistryServer = {
 
 export type RegistryOptions = {
   url?: string;
-  /** Per request. */
+  /** Per request for lookups and index pages. */
   timeoutMs?: number;
+  /** For the registry's own search, which is slow on the official registry. */
+  searchTimeoutMs?: number;
   fetch?: typeof fetch;
   /**
    * Where to keep a local index of the registry. With it, search runs locally
@@ -90,6 +92,8 @@ export type RegistryOptions = {
    * time, which takes 20 to 40 seconds on the official one.
    */
   indexFile?: string;
+  /** With an index file and no index yet, a search starts building it in the background. Default true. */
+  syncOnSearch?: boolean;
 };
 
 /** Bump when the stored index shape changes. */
@@ -101,8 +105,10 @@ type IndexFile = { format: number; url: string; syncedAt: string; servers: Regis
 export class RegistryClient {
   private readonly url: string;
   private readonly timeoutMs: number;
+  private readonly searchTimeoutMs: number;
   private readonly fetchImpl: typeof fetch;
   private readonly indexFile?: string;
+  private readonly syncOnSearch: boolean;
   /** Stored entries with the text search matches against. Normalized only when they match. */
   private index?: Array<{ server: RegistryEntry["server"]; text: string }>;
   private loaded?: Promise<void>;
@@ -114,9 +120,11 @@ export class RegistryClient {
 
   constructor(options: RegistryOptions = {}) {
     this.url = (options.url ?? DEFAULT_REGISTRY_URL).replace(/\/$/, "");
-    this.timeoutMs = options.timeoutMs ?? (options.indexFile ? 15_000 : 45_000);
+    this.timeoutMs = options.timeoutMs ?? 15_000;
+    this.searchTimeoutMs = options.searchTimeoutMs ?? Math.max(this.timeoutMs, 45_000);
     this.fetchImpl = options.fetch ?? fetch;
     this.indexFile = options.indexFile;
+    this.syncOnSearch = options.syncOnSearch ?? true;
   }
 
   /** Latest active versions matching `query`, best fit first. */
@@ -125,12 +133,15 @@ export class RegistryClient {
     if (this.indexFile) {
       await this.load();
       if (this.index) return this.searchIndex(key, limit);
-      // The first sync takes minutes. Until it is done, ask the registry, which is slow but complete.
-      void this.sync().catch(() => undefined);
+      // The first sync takes a while. Until it is done, ask the registry, which is slow but complete.
+      if (this.syncOnSearch) void this.sync().catch(() => undefined);
     }
     let pending = this.searches.get(key);
     if (!pending) {
-      pending = this.request(`/v0/servers?search=${encodeURIComponent(key)}&version=latest&limit=30`).then((body) =>
+      // The registry matches its search text literally inside names, so "time zone" finds nothing.
+      // Send the longest word and rank the results here with all of them.
+      const term = queryWords(key).sort((a, b) => b.length - a.length)[0] ?? key;
+      pending = this.request(`/v0/servers?search=${encodeURIComponent(term)}&version=latest&limit=50`, this.searchTimeoutMs).then((body) =>
         rank(entries(body), key),
       );
       // A failed search is not cached, so the next one tries again.
@@ -239,15 +250,15 @@ export class RegistryClient {
     }
   }
 
-  private async request(path: string): Promise<unknown> {
+  private async request(path: string, timeoutMs = this.timeoutMs): Promise<unknown> {
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), this.timeoutMs);
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
     try {
       const response = await this.fetchImpl(`${this.url}${path}`, { signal: controller.signal, headers: { accept: "application/json" } });
       if (!response.ok) throw new RegistryError(`registry answered ${response.status}`, response.status);
       return (await response.json()) as unknown;
     } catch (error) {
-      if (controller.signal.aborted) throw new RegistryError(`registry did not answer within ${this.timeoutMs} ms`);
+      if (controller.signal.aborted) throw new RegistryError(`registry did not answer within ${timeoutMs} ms`);
       throw error;
     } finally {
       clearTimeout(timer);
