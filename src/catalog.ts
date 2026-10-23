@@ -100,6 +100,8 @@ function protocolRecords(serverName: string, ident: string): ToolRecord[] {
     description: method.description,
     inputSchema: method.inputSchema,
     outputSchema: method.outputSchema,
+    // Listing and reading resources and prompts changes nothing upstream.
+    annotations: { readOnlyHint: true },
     kind: "protocol",
   }));
 }
@@ -120,6 +122,7 @@ export function namespaceWithIdent(serverName: string, ident: string, tools: Lis
     description: (tool.description ?? "").trim(),
     inputSchema: asSchema(tool.inputSchema),
     ...(tool.outputSchema && typeof tool.outputSchema === "object" ? { outputSchema: tool.outputSchema } : {}),
+    ...(tool.annotations && typeof tool.annotations === "object" ? { annotations: tool.annotations } : {}),
     kind: "tool",
   }));
   return { name: serverName, ident, tools: [...protocolRecords(serverName, ident), ...records] };

@@ -69,11 +69,12 @@ claude mcp add codemode -- npx -y mcptocodemode serve
 [mcp_servers.codemode]
 command = "npx"
 args = ["-y", "mcptocodemode", "serve"]
-# Optional: also approve execute without asking. search and describe are read-only and need no approval.
-# default_tools_approval_mode = "approve"
 ```
 
-`execute` is marked as able to write, because the code can call any of your tools, so Codex asks before each run unless you set the line above.
+`search` and `describe` are read-only, so Codex runs them without asking. `execute` can call any of your tools, so Codex asks before each run. Two ways to stop the prompts:
+
+- Add `"--read-only"` to `args`. The code can then only call methods their servers mark read-only, and `execute` is announced as read-only, so Codex approves it. See [Read-only mode](#read-only-mode).
+- Add `default_tools_approval_mode = "approve"` to approve everything, writes included.
 
 **Grok** — `~/.grok/config.toml`, same table as Codex. Grok starts a server from a project's `.grok/config.toml` only in a trusted folder (`grok --trust`).
 
@@ -133,6 +134,8 @@ It accepts standard `mcpServers` JSON, VS Code `servers` JSON, OpenCode `mcp` JS
 | --- | --- |
 | `--config file` | Use only these files. Repeatable. `CODEMODE_CONFIG` sets one. |
 | `--lazy` | Don't launch a cached server until code calls it. |
+| `--read-only` | Refuse methods their server does not mark read-only. Same as `CODEMODE_READ_ONLY=1`. |
+| `--allow server.method` | With `--read-only`, permit one method, or a whole server with `server.*`. Repeatable. |
 | `--no-cache` | Don't read or write the tool cache. Same as `CODEMODE_CACHE=0`. |
 | `CODEMODE_CACHE_DIR` | Where tool lists are cached. Default `~/.cache/mcptocodemode`. |
 
@@ -157,7 +160,17 @@ await mode.execute(`return await notes.get({ id: "1" });`);
 
 The code runs in a [QuickJS](https://github.com/quickjs-ng/quickjs) WebAssembly isolate that lasts for the session: `let` and `const` end with each run, but `state` carries over, so one run can store threads and the next can filter them. `reset: true` starts an empty session, and so does a run that times out. Each run gets 30 seconds, 100 tool calls, and 100,000 characters of code; the session gets 64 MiB. Tool results over 200,000 characters come back truncated. Images, audio, and binary resources stay in the host as `{ $handle, type, mimeType }`, which the code can pass to another tool without the bytes ever entering the sandbox or the model's context.
 
-The sandbox limits what the code can reach. It does not limit what a tool does: a tool that sends an email still sends it. Use `beforeCall` to block methods that need a human.
+The sandbox limits what the code can reach. It does not limit what a tool does: a tool that sends an email still sends it. Use read-only mode, or `beforeCall` in the library, to block methods that need a human.
+
+### Read-only mode
+
+```bash
+npx -y mcptocodemode serve --read-only --allow memory.create_entities
+```
+
+MCP servers mark each tool with hints such as `readOnlyHint` and `destructiveHint`. With `--read-only`, a call goes upstream only when its server marks the method read-only, or when `--allow` names it. Listing and reading resources and prompts always goes through. Anything else fails inside the program with a message that names the `--allow` flag, before it reaches the server. In return, `execute` is announced as read-only, so agents that approve read-only tools, like Codex, stop asking before each run.
+
+Of the 55 tools in the seven reference servers, 36 are marked read-only, 12 write, and 7 are marked destructive. The hints come from each server, so read-only mode is as trustworthy as the servers you connect. In the library, `readOnlyPolicy(catalog, { allow })` is the same check as a `beforeCall`.
 
 ## Contributing
 

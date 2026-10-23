@@ -6,7 +6,7 @@ const server = new McpServer({ name: "tiny", version: "0" });
 
 server.registerTool(
   "ping",
-  { description: "Reply pong.", inputSchema: {} },
+  { description: "Reply pong.", inputSchema: {}, annotations: { readOnlyHint: true } },
   async () => ({ content: [{ type: "text", text: JSON.stringify({ ok: true }) }] }),
 );
 

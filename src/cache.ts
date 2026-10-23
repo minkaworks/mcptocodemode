@@ -6,7 +6,7 @@ import type { ServerSpec } from "./config.js";
 import type { ListedTool } from "./types.js";
 
 /** Bump when the stored shape changes. Old entries are then ignored. */
-const FORMAT = 2;
+const FORMAT = 3;
 
 /**
  * Tool lists from earlier connects, one entry per server spec. A server with

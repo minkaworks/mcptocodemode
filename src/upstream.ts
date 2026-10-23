@@ -293,6 +293,7 @@ async function listAllTools(client: Client): Promise<ListedTool[]> {
         description: tool.description,
         inputSchema: tool.inputSchema as JsonSchema,
         ...(tool.outputSchema ? { outputSchema: tool.outputSchema as JsonSchema } : {}),
+        ...(tool.annotations ? { annotations: tool.annotations } : {}),
       });
     }
     cursor = page.nextCursor;

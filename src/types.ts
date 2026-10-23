@@ -12,12 +12,21 @@ export type JsonSchema = {
   additionalProperties?: boolean | JsonSchema;
 };
 
+/** MCP tool annotations. Hints from the server, not guarantees. */
+export type ToolAnnotations = {
+  readOnlyHint?: boolean;
+  destructiveHint?: boolean;
+  idempotentHint?: boolean;
+  openWorldHint?: boolean;
+};
+
 export type ListedTool = {
   name: string;
   description?: string;
   inputSchema?: JsonSchema;
   /** Shape of `structuredContent`, when the server declares it. */
   outputSchema?: JsonSchema;
+  annotations?: ToolAnnotations;
 };
 
 export type ToolRecord = {
@@ -33,6 +42,7 @@ export type ToolRecord = {
   inputSchema: JsonSchema;
   /** What the method resolves to in the sandbox, when known. */
   outputSchema?: JsonSchema;
+  annotations?: ToolAnnotations;
   /** Protocol methods are resources and prompts. They are present on every connected server. */
   kind?: "tool" | "protocol";
 };

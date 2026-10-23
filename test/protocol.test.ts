@@ -66,6 +66,8 @@ describe("upstream isolation", () => {
     try {
       expect(pool.failures.map((failure) => failure.name)).toEqual(["broken"]);
       expect(pool.catalog.servers.find((server) => server.name === "broken")?.error).toBeTruthy();
+      const ping = pool.catalog.servers.find((server) => server.name === "tiny")?.tools.find((tool) => tool.method === "ping");
+      expect(ping?.annotations).toEqual({ readOnlyHint: true });
       const mode = new CodeMode(pool.catalog, (call) => pool.call(call, 20_000));
       const result = await mode.execute(`
         const pong = await tiny.ping();

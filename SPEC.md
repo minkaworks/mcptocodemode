@@ -212,6 +212,8 @@ Resource text is returned. Resource blobs, images, and audio are not copied into
 
 The host holds one MCP client per connected server. A tool call from the sandbox is `tools/call` on that server. A protocol call is the matching resources or prompts request. The host may reject a call before it is sent. Rejection fails that call with the host's message.
 
+A host may run read-only. It then sends only calls to methods whose server marks them `readOnlyHint: true`, protocol reads, and methods the operator allowed by name, and it rejects the rest before they are sent. A read-only host announces `execute` with `readOnlyHint: true` and `destructiveHint: false`. Otherwise `execute` is announced with `readOnlyHint: false` and `destructiveHint: true`, since the code can call any method. `search` and `describe` are always read-only.
+
 A server is configured as a stdio command or a URL. The URL transport is streamable HTTP unless the config says `sse`. Legacy SSE remains part of the protocol, so a conforming host accepts it.
 
 The host reads servers from the caller's config. It accepts `{ servers: [...] }`, standard `{ mcpServers: { ... } }`, a `servers` object map, and `[mcp_servers.name]` TOML. `enabled: false` skips a server. Servers from later files replace earlier servers with the same name.

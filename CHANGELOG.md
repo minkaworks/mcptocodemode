@@ -15,6 +15,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
+- `serve --read-only` refuses calls to methods their server does not mark `readOnlyHint`, before they reach the server, and announces `execute` as read-only so agents like Codex run it without asking. `--allow server.method` and `--allow server.*` make exceptions. `CODEMODE_READ_ONLY=1` does the same as the flag. The library has `readOnlyPolicy`.
+- Tool annotations from upstream servers are kept in the catalog and the tool cache.
 - `execute` takes `reset: true` to start from an empty session. A run that times out, runs out of memory, or is interrupted also clears the session, and its error ends with `The session was cleared.`
 - A second `execute` while one is running returns `Another execute is still running.` and leaves the session alone.
 - Images, audio, and resource blobs from tools without `structuredContent` stay in the host as `{ $handle, type, mimeType }`. Passing that object in another call's arguments sends the base64 to that tool. The bytes never enter the sandbox, `logs`, `calls`, or the result. Handles last for the session, up to 8 MiB each and 32 MiB in all; past that the value is `omitted: true` as before.
@@ -41,7 +43,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 ### Changed
 
 - The `execute` description tells the model to compute its answer in the code, that a method resolves to the value in its signature and not to the `{ ok, result }` envelope, and to sample a `Promise<unknown>` value before returning it.
-- The tool cache format is 2. Entries written by 0.2.x are ignored once and rewritten with output schemas.
+- The tool cache format is 3. Entries written by 0.2.x are ignored once and rewritten with output schemas and annotations.
 - Repository standard revision 2: a Releases section, the package check in CI, and SHA pins for a workflow that publishes.
 
 ## [0.2.1] - 2026-10-22

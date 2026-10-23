@@ -51,6 +51,17 @@ describe("MCP surface", () => {
     const definitions = listed.tools.map(({ name, description, inputSchema }) => ({ name, description, inputSchema }));
     expect(Buffer.byteLength(JSON.stringify(definitions))).toBeLessThan(4_000);
 
+    // With a read-only policy, execute is announced as read-only so clients can approve it.
+    const readOnly = createCodeModeServer(mode, { readOnly: true });
+    const [roClient, roServer] = InMemoryTransport.createLinkedPair();
+    const roMcp = new Client({ name: "test-ro", version: "0" });
+    await Promise.all([roMcp.connect(roClient), readOnly.connect(roServer)]);
+    const roExecute = (await roMcp.listTools()).tools.find((tool) => tool.name === "execute");
+    expect(roExecute?.annotations).toMatchObject({ readOnlyHint: true, destructiveHint: false });
+    expect(roExecute?.description).toContain("read-only");
+    await roMcp.close();
+    await readOnly.close();
+
     const found = await client.callTool({ name: "search", arguments: { query: "labels" } });
     expect(JSON.stringify(found)).toContain("list_labels");
 

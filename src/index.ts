@@ -25,6 +25,7 @@ export { OVERLAP_ERROR, SandboxSession, wrapCode, runInSandbox, type SessionOpti
 export { schemaToType } from "./schema.js";
 export { searchCatalog } from "./search.js";
 export { createCodeModeServer, type CodeModeServerOptions } from "./server.js";
+export { readOnlyPolicy, type ReadOnlyOptions } from "./policy.js";
 export { defaultCacheDir, fileCache, specKey, type CatalogCache } from "./cache.js";
 export { toIdent, uniqueIdent } from "./ident.js";
 export {
@@ -57,5 +58,6 @@ export {
   type SearchHit,
   type ServerNamespace,
   type ToolCall,
+  type ToolAnnotations,
   type ToolRecord,
 } from "./types.js";

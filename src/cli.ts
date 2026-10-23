@@ -6,6 +6,7 @@ import { writeFile } from "node:fs/promises";
 import { defaultCacheDir, fileCache } from "./cache.js";
 import { CodeMode } from "./codemode.js";
 import { loadConfigs } from "./config.js";
+import { readOnlyPolicy } from "./policy.js";
 import { discoverConfig } from "./discover.js";
 import { createCodeModeServer } from "./server.js";
 import type { Limits } from "./types.js";
@@ -23,7 +24,7 @@ if (command === "demo-upstream") {
 } else {
   process.stderr.write(
     [
-      "mcptocodemode serve [--config file ...] [--no-cache] [--lazy]",
+      "mcptocodemode serve [--config file ...] [--no-cache] [--lazy] [--read-only [--allow server.method ...]]",
       "mcptocodemode sdk [--config file ...] [--out api.d.ts]",
       "mcptocodemode list [--config file ...]",
       "mcptocodemode demo-upstream",
@@ -33,11 +34,17 @@ if (command === "demo-upstream") {
       "One upstream that fails to connect is reported and skipped.",
       "serve answers at once. Servers whose tools are cached connect in the background.",
       "--lazy leaves a cached server unlaunched until code calls it.",
+      "--read-only refuses methods their server does not mark read-only. --allow makes an exception.",
       "list connects to every server and refreshes the cache.",
       "",
     ].join("\n"),
   );
   process.exit(command ? 1 : 0);
+}
+
+/** `--read-only` or `CODEMODE_READ_ONLY=1`. `--allow` alone implies nothing. */
+function readOnly(): boolean {
+  return process.argv.includes("--read-only") || process.env.CODEMODE_READ_ONLY === "1";
 }
 
 function flag(name: string): string | undefined {
@@ -104,7 +111,10 @@ async function openPool(kind: "serve" | "sdk" | "list"): Promise<{ pool: Upstrea
     const cached = waiting > 0 ? `, ${waiting} from cache` : "";
     process.stderr.write(`mcptocodemode: ${pool.connected.length} connected${cached}, ${toolCount} tools\n`);
   });
-  const mode: CodeMode = new CodeMode(pool.catalog, (call) => pool.call(call, limits.maxResultChars, mode.blobs), { limits });
+  const mode: CodeMode = new CodeMode(pool.catalog, (call) => pool.call(call, limits.maxResultChars, mode.blobs), {
+    limits,
+    beforeCall: readOnly() ? readOnlyPolicy(pool.catalog, { allow: flags("--allow") }) : undefined,
+  });
   return { pool, mode };
 }
 
@@ -117,7 +127,7 @@ async function serve(): Promise<void> {
     return;
   }
   const { pool, mode } = await openPool("serve");
-  const server = createCodeModeServer(mode, { ready: pool.ready });
+  const server = createCodeModeServer(mode, { ready: pool.ready, readOnly: readOnly() });
   const transport = new StdioServerTransport();
   const shutdown = async () => {
     mode.close();
@@ -174,6 +184,7 @@ async function serveDemo(): Promise<void> {
     {
       description: "List notes. Returns id and title.",
       inputSchema: {},
+      annotations: { readOnlyHint: true },
     },
     async () => {
       const rows = notes.map(({ id, title }) => ({ id, title }));
@@ -185,6 +196,7 @@ async function serveDemo(): Promise<void> {
     {
       description: "Read one note by id.",
       inputSchema: { id: z.string().describe("Note id from list.") },
+      annotations: { readOnlyHint: true },
     },
     async ({ id }) => {
       const note = notes.find((item) => item.id === id);

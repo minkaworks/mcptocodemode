@@ -34,6 +34,11 @@ export type CodeModeServerOptions = {
    * once, and each tool call waits for this before it reads the catalog.
    */
   ready?: Promise<unknown>;
+  /**
+   * The host refuses methods not marked read-only (see `readOnlyPolicy`).
+   * execute is then announced as read-only too, so clients can approve it.
+   */
+  readOnly?: boolean;
 };
 
 /** search and describe only read the catalog. Clients use this to approve them without asking. */
@@ -41,6 +46,9 @@ const READ_ONLY = { readOnlyHint: true, idempotentHint: true, openWorldHint: fal
 
 /** execute can call any upstream tool, including ones that write. */
 const RUNS_UPSTREAM_TOOLS = { readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: true } as const;
+
+/** With a read-only policy, execute can only reach methods their servers mark read-only. */
+const RUNS_READ_ONLY_TOOLS = { readOnlyHint: true, destructiveHint: false, idempotentHint: false, openWorldHint: true } as const;
 
 export function createCodeModeServer(mode: CodeMode, options: CodeModeServerOptions = {}): McpServer {
   const ready = options.ready ?? Promise.resolve();
@@ -104,9 +112,10 @@ export function createCodeModeServer(mode: CodeMode, options: CodeModeServerOpti
         "run 2 `return state.threads.filter((thread) => thread.unread).length;`",
         "Images and binary results arrive as { $handle, type, mimeType }. Pass that object to another tool and it receives the bytes.",
         "reset: true starts an empty session. console.log output is returned.",
+        ...(options.readOnly ? ["This session is read-only: methods their server does not mark read-only are refused."] : []),
       ].join(" "),
       inputSchema: executeInput,
-      annotations: RUNS_UPSTREAM_TOOLS,
+      annotations: options.readOnly ? RUNS_READ_ONLY_TOOLS : RUNS_UPSTREAM_TOOLS,
     },
     async ({ code, timeout_ms, reset }) => {
       await ready;
