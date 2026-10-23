@@ -26,6 +26,8 @@ export { schemaToType } from "./schema.js";
 export { searchCatalog } from "./search.js";
 export { confirmInstall, createCodeModeServer, type CodeModeServerOptions } from "./server.js";
 export { readOnlyPolicy, type ReadOnlyOptions } from "./policy.js";
+export { AGENT_SERVER_NAME, detectAgents, type AgentEnvironment, type AgentTarget } from "./agents.js";
+export { runSetup, type SetupOptions } from "./setup.js";
 export {
   callbackUrl,
   DEFAULT_CALLBACK_PORT,

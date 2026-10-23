@@ -56,6 +56,12 @@ Without a model in the loop:
 
 ## Use it
 
+```bash
+npx -y mcptocodemode setup
+```
+
+`setup` finds the coding agents on this machine (Claude Code, Codex, Cursor, Grok, OpenCode, Pi, Claude Desktop), lets you pick which ones get MCPtoCodeMode, asks whether to turn on read-only mode and the registry, shows exactly what it will change, and changes it after you confirm. It uses each agent's own `mcp add` command where there is one, and edits the file otherwise, after saving a `.mcptocodemode.bak` copy. `setup --remove` takes it out again. `--agents`, `--read-only`, `--registry`, `--yes`, and `--dry-run` skip the questions.
+
 `npx -y mcptocodemode` runs it without installing. To keep it around, install it globally and you also get the short `cm` command:
 
 ```bash

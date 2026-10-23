@@ -14,6 +14,7 @@ import { loadConfigs } from "./config.js";
 import { readOnlyPolicy } from "./policy.js";
 import { discoverConfig } from "./discover.js";
 import { confirmInstall, createCodeModeServer } from "./server.js";
+import { runSetup } from "./setup.js";
 import type { Limits } from "./types.js";
 import { login, logout, nestingDepth, SELF_NAME, UpstreamPool } from "./upstream.js";
 import { VERSION } from "./version.js";
@@ -41,6 +42,18 @@ if (command === "demo-upstream") {
   await index();
 } else if (command === "add") {
   await add(process.argv[3]);
+} else if (command === "setup") {
+  const agents = flag("--agents");
+  const result = await runSetup({
+    agents: agents ? agents.split(",").map((id) => id.trim()) : undefined,
+    yes: process.argv.includes("--yes"),
+    remove: process.argv.includes("--remove"),
+    readOnly: process.argv.includes("--read-only") ? true : undefined,
+    registry: process.argv.includes("--registry") ? true : undefined,
+    launch: process.argv.includes("--npx") ? "npx" : process.argv.includes("--installed") ? "installed" : undefined,
+    dryRun: process.argv.includes("--dry-run"),
+  });
+  process.exit(result.failed.length > 0 ? 1 : 0);
 } else if (command === "remove") {
   await remove(process.argv[3]);
 } else if (command === "login" || command === "logout") {
@@ -50,6 +63,7 @@ if (command === "demo-upstream") {
   const self = commandName();
   process.stderr.write(
     [
+      `${self} setup [--agents claude-code,codex,...] [--read-only] [--registry] [--npx] [--yes] [--dry-run] [--remove]`,
       `${self} serve [--config file ...] [--no-cache] [--lazy] [--read-only [--allow server.method ...]] [--registry]`,
       `${self} sdk [--config file ...] [--out api.d.ts]`,
       `${self} list [--config file ...]`,
@@ -61,6 +75,7 @@ if (command === "demo-upstream") {
       `${self} logout <server>`,
       `${self} demo-upstream`,
       "",
+      "setup adds mcptocodemode to the coding agents on this machine. It shows what changes and asks first.",
       "A config file is this project's JSON, standard mcpServers JSON, or [mcp_servers.*] TOML.",
       "With no --config, serve reads the MCP configs already on this machine.",
       "One upstream that fails to connect is reported and skipped.",
