@@ -36,12 +36,12 @@
     "README.md"
   ],
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "tsc -p tsconfig.json && node -e \"require('node:fs').chmodSync('dist/cli.js',0o755)\"",
     "test": "vitest run",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "measure": "node scripts/measure.mjs",
     "bench:model": "node scripts/bench-model.mjs",
-    "prepack": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\" && tsc -p tsconfig.json"
+    "prepack": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\" && npm run build"
   },
   "engines": {
     "node": ">=20"
