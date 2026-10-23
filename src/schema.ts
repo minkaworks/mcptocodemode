@@ -82,7 +82,8 @@ function arrayType(schema: JsonSchema, depth: number, opts: RenderOpts): string 
     return `[${parts.join(", ")}]`;
   }
   const item = schemaToType(schema.items, depth, opts);
-  return `${item}[]`;
+  // `A | B[]` is A or an array of B. An array of the union needs parentheses.
+  return item.includes(" | ") ? `(${item})[]` : `${item}[]`;
 }
 
 /** Argument type for a tool. Empty required lists make the argument optional at the call site. */

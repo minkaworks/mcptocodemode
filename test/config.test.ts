@@ -90,6 +90,29 @@ command = "nope"
   });
 });
 
+describe("agent configs", () => {
+  it("reads OpenCode local and remote servers from JSONC", () => {
+    const parsed = parseConfig(
+      `{
+        "$schema": "https://opencode.ai/config.json",
+        // OpenCode allows comments
+        "mcp": {
+          "files": { "type": "local", "command": ["npx", "-y", "server", "\${ROOT}"], "environment": { "A": "b" } },
+          "docs": { "type": "remote", "url": "https://example.com/mcp", "headers": { "Authorization": "Bearer {env:T}" } },
+          "off": { "type": "local", "command": ["nope"], "enabled": false },
+        },
+      }`,
+      "opencode.jsonc",
+      { ROOT: "/data", T: "tok" },
+    );
+    expect(parsed.issues).toEqual([]);
+    expect(parsed.servers).toEqual([
+      { name: "files", transport: "stdio", command: "npx", args: ["-y", "server", "/data"], env: { A: "b" } },
+      { name: "docs", transport: "http", url: "https://example.com/mcp", headers: { Authorization: "Bearer tok" } },
+    ]);
+  });
+});
+
 describe("discovery", () => {
   it("merges home and project configs without launching them", async () => {
     const home = await mkdtemp(path.join(tmpdir(), "codemode-home-"));
@@ -127,5 +150,21 @@ describe("discovery", () => {
     );
     const found = await discoverConfig({ cwd, home, platform: "linux", env: {} });
     expect(found.servers.map((server) => server.name)).toEqual(["user", "local"]);
+  });
+
+  it("finds OpenCode, Pi, and project Codex configs", async () => {
+    const home = await mkdtemp(path.join(tmpdir(), "codemode-home-"));
+    const cwd = await mkdtemp(path.join(tmpdir(), "codemode-cwd-"));
+    await mkdir(path.join(home, ".config", "opencode"), { recursive: true });
+    await mkdir(path.join(home, ".pi", "agent"), { recursive: true });
+    await mkdir(path.join(cwd, ".codex"), { recursive: true });
+    await writeFile(
+      path.join(home, ".config", "opencode", "opencode.json"),
+      JSON.stringify({ mcp: { oc: { type: "local", command: ["oc-server"] } } }),
+    );
+    await writeFile(path.join(home, ".pi", "agent", "mcp.json"), JSON.stringify({ mcpServers: { pi: { command: "pi-server" } } }));
+    await writeFile(path.join(cwd, ".codex", "config.toml"), '[mcp_servers.codex]\ncommand = "codex-server"\n');
+    const found = await discoverConfig({ cwd, home, platform: "linux", env: {} });
+    expect(found.servers.map((server) => server.name)).toEqual(["oc", "pi", "codex"]);
   });
 });

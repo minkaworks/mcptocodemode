@@ -112,4 +112,36 @@ describe("lazy start", () => {
       await pool.close();
     }
   }, 20_000);
+
+  it("drops the client's own entry for this server and remembers it", async () => {
+    const self: ServerSpec = {
+      name: "codemode",
+      command: process.execPath,
+      args: [fileURLToPath(new URL("./fixtures/self-mcp.mjs", import.meta.url))],
+      transport: "stdio",
+    };
+    const cache = fileCache(await mkdtemp(path.join(tmpdir(), "codemode-cache-")));
+    const seen: string[] = [];
+    const first = UpstreamPool.start([self, tiny], { cache, onFailure: (failure) => seen.push(failure.name) });
+    try {
+      await first.ready;
+      expect(first.catalog.servers.map((server) => server.name)).toEqual(["tiny"]);
+      expect(first.failures).toEqual([]);
+      expect(seen).toEqual([]);
+      expect(cache.isSelf(self)).toBe(true);
+      const mode = new CodeMode(first.catalog, (call) => first.call(call, 20_000));
+      expect(await mode.execute(`return await tiny.ping();`)).toMatchObject({ ok: true });
+    } finally {
+      await first.close();
+    }
+
+    const second = UpstreamPool.start([self, tiny], { cache, prewarm: false });
+    try {
+      await second.ready;
+      expect(second.catalog.servers.map((server) => server.name)).toEqual(["tiny"]);
+      expect(second.connected).toEqual([]);
+    } finally {
+      await second.close();
+    }
+  }, 20_000);
 });

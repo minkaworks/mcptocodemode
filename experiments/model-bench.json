@@ -1,0 +1,1446 @@
+{
+  "at": "2026-10-23T00:14:43.680Z",
+  "node": "v26.12.1",
+  "runs": 3,
+  "tools": {
+    "plain": 55,
+    "codemode": 3
+  },
+  "toolBytes": {
+    "plain": 32885,
+    "codemode": 2943
+  },
+  "summary": [
+    {
+      "model": "anthropic/claude-haiku-5.5",
+      "task": "log",
+      "arm": "plain",
+      "runs": 3,
+      "passed": 3,
+      "turns": 2,
+      "promptTokens": 101244,
+      "peakPromptTokens": 88729,
+      "completionTokens": 677,
+      "cost": 0.0104629,
+      "ms": 4079
+    },
+    {
+      "model": "anthropic/claude-haiku-5.5",
+      "task": "log",
+      "arm": "codemode",
+      "runs": 3,
+      "passed": 3,
+      "turns": 3,
+      "promptTokens": 7942,
+      "peakPromptTokens": 3429,
+      "completionTokens": 288,
+      "cost": 0.0009381999999999999,
+      "ms": 3621
+    },
+    {
+      "model": "anthropic/claude-haiku-5.5",
+      "task": "orders",
+      "arm": "plain",
+      "runs": 3,
+      "passed": 3,
+      "turns": 3,
+      "promptTokens": 46875,
+      "peakPromptTokens": 21428,
+      "completionTokens": 1241,
+      "cost": 0.005308,
+      "ms": 6134
+    },
+    {
+      "model": "anthropic/claude-haiku-5.5",
+      "task": "orders",
+      "arm": "codemode",
+      "runs": 3,
+      "passed": 3,
+      "turns": 5,
+      "promptTokens": 31169,
+      "peakPromptTokens": 12351,
+      "completionTokens": 864,
+      "cost": 0.0035501,
+      "ms": 6756
+    },
+    {
+      "model": "anthropic/claude-haiku-5.5",
+      "task": "mixed",
+      "arm": "plain",
+      "runs": 3,
+      "passed": 3,
+      "turns": 2,
+      "promptTokens": 25408,
+      "peakPromptTokens": 12869,
+      "completionTokens": 231,
+      "cost": 0.0026563000000000003,
+      "ms": 2052
+    },
+    {
+      "model": "anthropic/claude-haiku-5.5",
+      "task": "mixed",
+      "arm": "codemode",
+      "runs": 3,
+      "passed": 3,
+      "turns": 3,
+      "promptTokens": 11167,
+      "peakPromptTokens": 5038,
+      "completionTokens": 277,
+      "cost": 0.0012471000000000001,
+      "ms": 2989
+    },
+    {
+      "model": "anthropic/claude-sonnet-5.5",
+      "task": "log",
+      "arm": "plain",
+      "runs": 3,
+      "passed": 3,
+      "turns": 2,
+      "promptTokens": 101244,
+      "peakPromptTokens": 88729,
+      "completionTokens": 180,
+      "cost": 0.204288,
+      "ms": 4811
+    },
+    {
+      "model": "anthropic/claude-sonnet-5.5",
+      "task": "log",
+      "arm": "codemode",
+      "runs": 3,
+      "passed": 3,
+      "turns": 3,
+      "promptTokens": 8093,
+      "peakPromptTokens": 3546,
+      "completionTokens": 229,
+      "cost": 0.018476,
+      "ms": 3248
+    },
+    {
+      "model": "anthropic/claude-sonnet-5.5",
+      "task": "orders",
+      "arm": "plain",
+      "runs": 3,
+      "passed": 3,
+      "turns": 3,
+      "promptTokens": 46875,
+      "peakPromptTokens": 21428,
+      "completionTokens": 1083,
+      "cost": 0.10458,
+      "ms": 8248
+    },
+    {
+      "model": "anthropic/claude-sonnet-5.5",
+      "task": "orders",
+      "arm": "codemode",
+      "runs": 3,
+      "passed": 3,
+      "turns": 4,
+      "promptTokens": 12918,
+      "peakPromptTokens": 4483,
+      "completionTokens": 666,
+      "cost": 0.032566,
+      "ms": 7508
+    },
+    {
+      "model": "anthropic/claude-sonnet-5.5",
+      "task": "mixed",
+      "arm": "plain",
+      "runs": 3,
+      "passed": 3,
+      "turns": 2,
+      "promptTokens": 25408,
+      "peakPromptTokens": 12869,
+      "completionTokens": 190,
+      "cost": 0.052716,
+      "ms": 2423
+    },
+    {
+      "model": "anthropic/claude-sonnet-5.5",
+      "task": "mixed",
+      "arm": "codemode",
+      "runs": 3,
+      "passed": 3,
+      "turns": 3,
+      "promptTokens": 10943,
+      "peakPromptTokens": 4924,
+      "completionTokens": 257,
+      "cost": 0.024456,
+      "ms": 3330
+    }
+  ],
+  "results": [
+    {
+      "model": "anthropic/claude-haiku-5.5",
+      "task": "log",
+      "arm": "plain",
+      "run": 1,
+      "turns": 2,
+      "toolCalls": 1,
+      "promptTokens": 101244,
+      "completionTokens": 733,
+      "cost": 0.010490900000000001,
+      "peakPromptTokens": 88729,
+      "ms": 4079,
+      "ok": true,
+      "answer": {
+        "errors": 20,
+        "lastJob": 1940
+      },
+      "trace": [
+        {
+          "turn": 1,
+          "tool": "filesystem__read_text_file",
+          "args": "{\"path\": \"/tmp/mcptocodemode-demo/service.log\"}",
+          "resultBytes": 129977,
+          "resultStart": "{\"content\":\"2026-10-22T09:00:01.000Z INFO  http GET /api/orders/1 200 17ms\\n2026-10-22T09:00:02.000Z INFO  http GET /api/orders/2 200 30ms\\n2026-10-22T09:00:03.000Z INFO  http GET /api/orders/3 200 43"
+        }
+      ]
+    },
+    {
+      "model": "anthropic/claude-haiku-5.5",
+      "task": "log",
+      "arm": "plain",
+      "run": 2,
+      "turns": 2,
+      "toolCalls": 1,
+      "promptTokens": 101244,
+      "completionTokens": 677,
+      "cost": 0.0104629,
+      "peakPromptTokens": 88729,
+      "ms": 3884,
+      "ok": true,
+      "answer": {
+        "errors": 20,
+        "lastJob": 1940
+      },
+      "trace": [
+        {
+          "turn": 1,
+          "tool": "filesystem__read_text_file",
+          "args": "{\"path\": \"/tmp/mcptocodemode-demo/service.log\"}",
+          "resultBytes": 129977,
+          "resultStart": "{\"content\":\"2026-10-22T09:00:01.000Z INFO  http GET /api/orders/1 200 17ms\\n2026-10-22T09:00:02.000Z INFO  http GET /api/orders/2 200 30ms\\n2026-10-22T09:00:03.000Z INFO  http GET /api/orders/3 200 43"
+        }
+      ]
+    },
+    {
+      "model": "anthropic/claude-haiku-5.5",
+      "task": "log",
+      "arm": "plain",
+      "run": 3,
+      "turns": 2,
+      "toolCalls": 1,
+      "promptTokens": 101244,
+      "completionTokens": 669,
+      "cost": 0.0104589,
+      "peakPromptTokens": 88729,
+      "ms": 4327,
+      "ok": true,
+      "answer": {
+        "errors": 20,
+        "lastJob": 1940
+      },
+      "trace": [
+        {
+          "turn": 1,
+          "tool": "filesystem__read_text_file",
+          "args": "{\"path\": \"/tmp/mcptocodemode-demo/service.log\"}",
+          "resultBytes": 129977,
+          "resultStart": "{\"content\":\"2026-10-22T09:00:01.000Z INFO  http GET /api/orders/1 200 17ms\\n2026-10-22T09:00:02.000Z INFO  http GET /api/orders/2 200 30ms\\n2026-10-22T09:00:03.000Z INFO  http GET /api/orders/3 200 43"
+        }
+      ]
+    },
+    {
+      "model": "anthropic/claude-haiku-5.5",
+      "task": "log",
+      "arm": "codemode",
+      "run": 1,
+      "turns": 3,
+      "toolCalls": 2,
+      "promptTokens": 8137,
+      "completionTokens": 292,
+      "cost": 0.0009597,
+      "peakPromptTokens": 3590,
+      "ms": 3621,
+      "ok": true,
+      "answer": {
+        "errors": 20,
+        "lastJob": 1940
+      },
+      "trace": [
+        {
+          "turn": 1,
+          "tool": "search",
+          "args": "{\"query\": \"read file\"}",
+          "resultBytes": 4511,
+          "resultStart": "{\n  \"servers\": [\n    {\n      \"name\": \"everything\",\n      \"ident\": \"everything\",\n      \"toolCount\": 16\n    },\n    {\n      \"name\": \"filesystem\",\n      \"ident\": \"filesystem\",\n      \"toolCount\": 14\n    },"
+        },
+        {
+          "turn": 2,
+          "tool": "execute",
+          "args": "{\"code\": \"const r = await filesystem.read_text_file({ path: \\\"/tmp/mcptocodemode-demo/service.log\\\" });\\nconst text = typeof r === \\\"string\\\" ? r : (r.content ?? JSON.stringify(r));\\nconst lines = text.split(\\\"\\\\n\\\");\\nconst errLines = lines.filter(l => l.includes(\\\" ERROR \\\"));\\nconst last = errLines[errLines.length - 1];\\nreturn { count: errLines.length, last, total: lines.length, sample: lines.slice(0,3) };\"}",
+          "resultBytes": 552,
+          "resultStart": "{\n  \"ok\": true,\n  \"result\": {\n    \"count\": 20,\n    \"last\": \"2026-10-22T09:32:20.000Z ERROR payment-worker job=1940 upstream timed out after 30000 ms\",\n    \"total\": 2001,\n    \"sample\": [\n      \"2026-10"
+        }
+      ]
+    },
+    {
+      "model": "anthropic/claude-haiku-5.5",
+      "task": "log",
+      "arm": "codemode",
+      "run": 2,
+      "turns": 3,
+      "toolCalls": 2,
+      "promptTokens": 7942,
+      "completionTokens": 288,
+      "cost": 0.0009381999999999999,
+      "peakPromptTokens": 3429,
+      "ms": 3091,
+      "ok": true,
+      "answer": {
+        "errors": 20,
+        "lastJob": 1940
+      },
+      "trace": [
+        {
+          "turn": 1,
+          "tool": "search",
+          "args": "{\"query\": \"read file contents\"}",
+          "resultBytes": 4457,
+          "resultStart": "{\n  \"servers\": [\n    {\n      \"name\": \"everything\",\n      \"ident\": \"everything\",\n      \"toolCount\": 16\n    },\n    {\n      \"name\": \"filesystem\",\n      \"ident\": \"filesystem\",\n      \"toolCount\": 14\n    },"
+        },
+        {
+          "turn": 2,
+          "tool": "execute",
+          "args": "{\"code\": \"const r = await filesystem.read_text_file({ path: \\\"/tmp/mcptocodemode-demo/service.log\\\" });\\nconst lines = r.content.split(\\\"\\\\n\\\");\\nconst err = lines.filter(l => l.includes(\\\" ERROR \\\"));\\nconst last = err[err.length - 1] || \\\"\\\";\\nconst m = last.match(/job[=:\\\\s#]*(\\\\d+)/i);\\nreturn { count: err.length, last, jobs: m ? Number(m[1]) : null, total: lines.length };\"}",
+          "resultBytes": 332,
+          "resultStart": "{\n  \"ok\": true,\n  \"result\": {\n    \"count\": 20,\n    \"last\": \"2026-10-22T09:32:20.000Z ERROR payment-worker job=1940 upstream timed out after 30000 ms\",\n    \"jobs\": 1940,\n    \"total\": 2001\n  },\n  \"logs\""
+        }
+      ]
+    },
+    {
+      "model": "anthropic/claude-haiku-5.5",
+      "task": "log",
+      "arm": "codemode",
+      "run": 3,
+      "turns": 3,
+      "toolCalls": 2,
+      "promptTokens": 7889,
+      "completionTokens": 246,
+      "cost": 0.0009119,
+      "peakPromptTokens": 3376,
+      "ms": 3982,
+      "ok": true,
+      "answer": {
+        "errors": 20,
+        "lastJob": 1940
+      },
+      "trace": [
+        {
+          "turn": 1,
+          "tool": "search",
+          "args": "{\"query\": \"read file contents\"}",
+          "resultBytes": 4457,
+          "resultStart": "{\n  \"servers\": [\n    {\n      \"name\": \"everything\",\n      \"ident\": \"everything\",\n      \"toolCount\": 16\n    },\n    {\n      \"name\": \"filesystem\",\n      \"ident\": \"filesystem\",\n      \"toolCount\": 14\n    },"
+        },
+        {
+          "turn": 2,
+          "tool": "execute",
+          "args": "{\"code\": \"const r = await filesystem.read_text_file({ path: \\\"/tmp/mcptocodemode-demo/service.log\\\" });\\nconst lines = r.content.split(/\\\\r?\\\\n/);\\nconst err = lines.filter(l => l.includes(\\\" ERROR \\\"));\\nconst last = err[err.length - 1];\\nreturn { count: err.length, last, total: lines.length };\"}",
+          "resultBytes": 314,
+          "resultStart": "{\n  \"ok\": true,\n  \"result\": {\n    \"count\": 20,\n    \"last\": \"2026-10-22T09:32:20.000Z ERROR payment-worker job=1940 upstream timed out after 30000 ms\",\n    \"total\": 2001\n  },\n  \"logs\": [],\n  \"calls\": ["
+        }
+      ]
+    },
+    {
+      "model": "anthropic/claude-haiku-5.5",
+      "task": "orders",
+      "arm": "plain",
+      "run": 1,
+      "turns": 3,
+      "toolCalls": 2,
+      "promptTokens": 46875,
+      "completionTokens": 1203,
+      "cost": 0.005289,
+      "peakPromptTokens": 21428,
+      "ms": 6161,
+      "ok": true,
+      "answer": {
+        "paid": 19,
+        "total": 1906.81
+      },
+      "trace": [
+        {
+          "turn": 1,
+          "tool": "filesystem__list_directory",
+          "args": "{\"path\": \"/tmp/mcptocodemode-demo/orders\"}",
+          "resultBytes": 537,
+          "resultStart": "{\"content\":\"[FILE] ord-001.json\\n[FILE] ord-002.json\\n[FILE] ord-003.json\\n[FILE] ord-004.json\\n[FILE] ord-005.json\\n[FILE] ord-006.json\\n[FILE] ord-007.json\\n[FILE] ord-008.json\\n[FILE] ord-009.json\\"
+        },
+        {
+          "turn": 2,
+          "tool": "filesystem__read_multiple_files",
+          "args": "{\"paths\": [\"/tmp/mcptocodemode-demo/orders/ord-001.json\",\"/tmp/mcptocodemode-demo/orders/ord-002.json\",\"/tmp/mcptocodemode-demo/orders/ord-003.json\",\"/tmp/mcptocodemode-demo/orders/ord-004.json\",\"/tmp/mcptocodemode-demo/orders/ord-005.json\",\"/tmp/mcptocodemode-demo/orders/ord-006.json\",\"/tmp/mcptocodemode-demo/orders/ord-007.json\",\"/tmp/mcptocodemode-demo/orders/ord-008.json\",\"/tmp/mcptocodemode-demo/orders/ord-009.json\",\"/tmp/mcptocodemode-demo/orders/ord-010.json\",\"/tmp/mcptocodemode-demo/orders/ord-011.json\",\"/tmp/mcptocodemode-demo/orders/ord-012.json\",\"/tmp/mcptocodemode-demo/orders/ord-0",
+          "resultBytes": 13194,
+          "resultStart": "{\"content\":\"/tmp/mcptocodemode-demo/orders/ord-001.json:\\n{\\n  \\\"id\\\": \\\"ord-001\\\",\\n  \\\"customer\\\": \\\"customer-7\\\",\\n  \\\"status\\\": \\\"paid\\\",\\n  \\\"total\\\": 46.99,\\n  \\\"lines\\\": [\\n    {\\n      \\\"sku\\\""
+        }
+      ]
+    },
+    {
+      "model": "anthropic/claude-haiku-5.5",
+      "task": "orders",
+      "arm": "plain",
+      "run": 2,
+      "turns": 3,
+      "toolCalls": 2,
+      "promptTokens": 46875,
+      "completionTokens": 1351,
+      "cost": 0.005363,
+      "peakPromptTokens": 21428,
+      "ms": 6134,
+      "ok": true,
+      "answer": {
+        "paid": 19,
+        "total": 1906.81
+      },
+      "trace": [
+        {
+          "turn": 1,
+          "tool": "filesystem__list_directory",
+          "args": "{\"path\": \"/tmp/mcptocodemode-demo/orders\"}",
+          "resultBytes": 537,
+          "resultStart": "{\"content\":\"[FILE] ord-001.json\\n[FILE] ord-002.json\\n[FILE] ord-003.json\\n[FILE] ord-004.json\\n[FILE] ord-005.json\\n[FILE] ord-006.json\\n[FILE] ord-007.json\\n[FILE] ord-008.json\\n[FILE] ord-009.json\\"
+        },
+        {
+          "turn": 2,
+          "tool": "filesystem__read_multiple_files",
+          "args": "{\"paths\": [\"/tmp/mcptocodemode-demo/orders/ord-001.json\",\"/tmp/mcptocodemode-demo/orders/ord-002.json\",\"/tmp/mcptocodemode-demo/orders/ord-003.json\",\"/tmp/mcptocodemode-demo/orders/ord-004.json\",\"/tmp/mcptocodemode-demo/orders/ord-005.json\",\"/tmp/mcptocodemode-demo/orders/ord-006.json\",\"/tmp/mcptocodemode-demo/orders/ord-007.json\",\"/tmp/mcptocodemode-demo/orders/ord-008.json\",\"/tmp/mcptocodemode-demo/orders/ord-009.json\",\"/tmp/mcptocodemode-demo/orders/ord-010.json\",\"/tmp/mcptocodemode-demo/orders/ord-011.json\",\"/tmp/mcptocodemode-demo/orders/ord-012.json\",\"/tmp/mcptocodemode-demo/orders/ord-0",
+          "resultBytes": 13194,
+          "resultStart": "{\"content\":\"/tmp/mcptocodemode-demo/orders/ord-001.json:\\n{\\n  \\\"id\\\": \\\"ord-001\\\",\\n  \\\"customer\\\": \\\"customer-7\\\",\\n  \\\"status\\\": \\\"paid\\\",\\n  \\\"total\\\": 46.99,\\n  \\\"lines\\\": [\\n    {\\n      \\\"sku\\\""
+        }
+      ]
+    },
+    {
+      "model": "anthropic/claude-haiku-5.5",
+      "task": "orders",
+      "arm": "plain",
+      "run": 3,
+      "turns": 3,
+      "toolCalls": 2,
+      "promptTokens": 46875,
+      "completionTokens": 1241,
+      "cost": 0.005308,
+      "peakPromptTokens": 21428,
+      "ms": 5877,
+      "ok": true,
+      "answer": {
+        "paid": 19,
+        "total": 1906.81
+      },
+      "trace": [
+        {
+          "turn": 1,
+          "tool": "filesystem__list_directory",
+          "args": "{\"path\": \"/tmp/mcptocodemode-demo/orders\"}",
+          "resultBytes": 537,
+          "resultStart": "{\"content\":\"[FILE] ord-001.json\\n[FILE] ord-002.json\\n[FILE] ord-003.json\\n[FILE] ord-004.json\\n[FILE] ord-005.json\\n[FILE] ord-006.json\\n[FILE] ord-007.json\\n[FILE] ord-008.json\\n[FILE] ord-009.json\\"
+        },
+        {
+          "turn": 2,
+          "tool": "filesystem__read_multiple_files",
+          "args": "{\"paths\": [\"/tmp/mcptocodemode-demo/orders/ord-001.json\",\"/tmp/mcptocodemode-demo/orders/ord-002.json\",\"/tmp/mcptocodemode-demo/orders/ord-003.json\",\"/tmp/mcptocodemode-demo/orders/ord-004.json\",\"/tmp/mcptocodemode-demo/orders/ord-005.json\",\"/tmp/mcptocodemode-demo/orders/ord-006.json\",\"/tmp/mcptocodemode-demo/orders/ord-007.json\",\"/tmp/mcptocodemode-demo/orders/ord-008.json\",\"/tmp/mcptocodemode-demo/orders/ord-009.json\",\"/tmp/mcptocodemode-demo/orders/ord-010.json\",\"/tmp/mcptocodemode-demo/orders/ord-011.json\",\"/tmp/mcptocodemode-demo/orders/ord-012.json\",\"/tmp/mcptocodemode-demo/orders/ord-0",
+          "resultBytes": 13194,
+          "resultStart": "{\"content\":\"/tmp/mcptocodemode-demo/orders/ord-001.json:\\n{\\n  \\\"id\\\": \\\"ord-001\\\",\\n  \\\"customer\\\": \\\"customer-7\\\",\\n  \\\"status\\\": \\\"paid\\\",\\n  \\\"total\\\": 46.99,\\n  \\\"lines\\\": [\\n    {\\n      \\\"sku\\\""
+        }
+      ]
+    },
+    {
+      "model": "anthropic/claude-haiku-5.5",
+      "task": "orders",
+      "arm": "codemode",
+      "run": 1,
+      "turns": 4,
+      "toolCalls": 3,
+      "promptTokens": 19786,
+      "completionTokens": 789,
+      "cost": 0.0023731,
+      "peakPromptTokens": 11614,
+      "ms": 6756,
+      "ok": true,
+      "answer": {
+        "paid": 19,
+        "total": 1906.81
+      },
+      "trace": [
+        {
+          "turn": 1,
+          "tool": "search",
+          "args": "{\"query\": \"list directory read files\"}",
+          "resultBytes": 4600,
+          "resultStart": "{\n  \"servers\": [\n    {\n      \"name\": \"everything\",\n      \"ident\": \"everything\",\n      \"toolCount\": 16\n    },\n    {\n      \"name\": \"filesystem\",\n      \"ident\": \"filesystem\",\n      \"toolCount\": 14\n    },"
+        },
+        {
+          "turn": 2,
+          "tool": "execute",
+          "args": "{\"code\": \"const d = await filesystem.list_directory({ path: \\\"/tmp/mcptocodemode-demo/orders\\\" });\\nreturn d;\"}",
+          "resultBytes": 716,
+          "resultStart": "{\n  \"ok\": true,\n  \"result\": {\n    \"content\": \"[FILE] ord-001.json\\n[FILE] ord-002.json\\n[FILE] ord-003.json\\n[FILE] ord-004.json\\n[FILE] ord-005.json\\n[FILE] ord-006.json\\n[FILE] ord-007.json\\n[FILE] "
+        },
+        {
+          "turn": 3,
+          "tool": "execute",
+          "args": "{\"code\": \"const names = Array.from({length:25},(_,i)=>`ord-${String(i+1).padStart(3,\\\"0\\\")}.json`);\\nconst r = await filesystem.read_multiple_files({ paths: names.map(n=>`/tmp/mcptocodemode-demo/orders/${n}`) });\\nreturn r;\"}",
+          "resultBytes": 13378,
+          "resultStart": "{\n  \"ok\": true,\n  \"result\": {\n    \"content\": \"/tmp/mcptocodemode-demo/orders/ord-001.json:\\n{\\n  \\\"id\\\": \\\"ord-001\\\",\\n  \\\"customer\\\": \\\"customer-7\\\",\\n  \\\"status\\\": \\\"paid\\\",\\n  \\\"total\\\": 46.99,\\n  "
+        }
+      ]
+    },
+    {
+      "model": "anthropic/claude-haiku-5.5",
+      "task": "orders",
+      "arm": "codemode",
+      "run": 2,
+      "turns": 5,
+      "toolCalls": 4,
+      "promptTokens": 31181,
+      "completionTokens": 864,
+      "cost": 0.0035501,
+      "peakPromptTokens": 12353,
+      "ms": 6371,
+      "ok": true,
+      "answer": {
+        "paid": 19,
+        "total": 1906.81
+      },
+      "trace": [
+        {
+          "turn": 1,
+          "tool": "search",
+          "args": "{\"query\": \"list directory read file\"}",
+          "resultBytes": 4501,
+          "resultStart": "{\n  \"servers\": [\n    {\n      \"name\": \"everything\",\n      \"ident\": \"everything\",\n      \"toolCount\": 16\n    },\n    {\n      \"name\": \"filesystem\",\n      \"ident\": \"filesystem\",\n      \"toolCount\": 14\n    },"
+        },
+        {
+          "turn": 2,
+          "tool": "execute",
+          "args": "{\"code\": \"const listing = await filesystem.list_directory({ path: \\\"/tmp/mcptocodemode-demo/orders\\\" });\\nreturn listing;\"}",
+          "resultBytes": 716,
+          "resultStart": "{\n  \"ok\": true,\n  \"result\": {\n    \"content\": \"[FILE] ord-001.json\\n[FILE] ord-002.json\\n[FILE] ord-003.json\\n[FILE] ord-004.json\\n[FILE] ord-005.json\\n[FILE] ord-006.json\\n[FILE] ord-007.json\\n[FILE] "
+        },
+        {
+          "turn": 3,
+          "tool": "execute",
+          "args": "{\"code\": \"const listing = await filesystem.list_directory({ path: \\\"/tmp/mcptocodemode-demo/orders\\\" });\\nconst names = listing.content.split(\\\"\\\\n\\\").map(l => l.replace(\\\"[FILE] \\\", \\\"\\\").trim()).filter(n => n.endsWith(\\\".json\\\"));\\nconst docs = await Promise.all(names.map(async n => {\\n  const r = await filesystem.read_text_file({ path: `/tmp/mcptocodemode-demo/orders/${n}` });\\n  return { n, text: r.content };\\n}));\\nreturn docs.map(d => d.n + \\\": \\\" + d.text.slice(0, 300));\"}",
+          "resultBytes": 12453,
+          "resultStart": "{\n  \"ok\": true,\n  \"result\": [\n    \"ord-001.json: {\\n  \\\"id\\\": \\\"ord-001\\\",\\n  \\\"customer\\\": \\\"customer-7\\\",\\n  \\\"status\\\": \\\"paid\\\",\\n  \\\"total\\\": 46.99,\\n  \\\"lines\\\": [\\n    {\\n      \\\"sku\\\": \\\"sku-1"
+        },
+        {
+          "turn": 4,
+          "tool": "execute",
+          "args": "{\"code\": \"const listing = await filesystem.list_directory({ path: \\\"/tmp/mcptocodemode-demo/orders\\\" });\\nconst names = listing.content.split(\\\"\\\\n\\\").map(l => l.replace(\\\"[FILE] \\\", \\\"\\\").trim()).filter(n => n.endsWith(\\\".json\\\"));\\nconst docs = await Promise.all(names.map(async n => {\\n  const r = await filesystem.read_text_file({ path: `/tmp/mcptocodemode-demo/orders/${n}` });\\n  return JSON.parse(r.content);\\n}));\\nconst statuses = {};\\nfor (const d of docs) statuses[JSON.stringify(d.status)] = (statuses[JSON.stringify(d.status)] || 0) + 1;\\nconst paid = docs.filter(d => d.status === \\\"pai",
+          "resultBytes": 3062,
+          "resultStart": "{\n  \"ok\": true,\n  \"result\": {\n    \"count\": 25,\n    \"statuses\": {\n      \"\\\"paid\\\"\": 19,\n      \"\\\"refunded\\\"\": 6\n    },\n    \"paid\": 19,\n    \"total\": 1906.81,\n    \"types\": [\n      \"number\"\n    ]\n  },\n  \""
+        }
+      ]
+    },
+    {
+      "model": "anthropic/claude-haiku-5.5",
+      "task": "orders",
+      "arm": "codemode",
+      "run": 3,
+      "turns": 5,
+      "toolCalls": 4,
+      "promptTokens": 31169,
+      "completionTokens": 873,
+      "cost": 0.0035534,
+      "peakPromptTokens": 12351,
+      "ms": 6821,
+      "ok": true,
+      "answer": {
+        "paid": 19,
+        "total": 1906.81
+      },
+      "trace": [
+        {
+          "turn": 1,
+          "tool": "search",
+          "args": "{\"query\": \"list directory read file\"}",
+          "resultBytes": 4501,
+          "resultStart": "{\n  \"servers\": [\n    {\n      \"name\": \"everything\",\n      \"ident\": \"everything\",\n      \"toolCount\": 16\n    },\n    {\n      \"name\": \"filesystem\",\n      \"ident\": \"filesystem\",\n      \"toolCount\": 14\n    },"
+        },
+        {
+          "turn": 2,
+          "tool": "execute",
+          "args": "{\"code\": \"const listing = await filesystem.list_directory({ path: \\\"/tmp/mcptocodemode-demo/orders\\\" });\\nreturn listing;\"}",
+          "resultBytes": 716,
+          "resultStart": "{\n  \"ok\": true,\n  \"result\": {\n    \"content\": \"[FILE] ord-001.json\\n[FILE] ord-002.json\\n[FILE] ord-003.json\\n[FILE] ord-004.json\\n[FILE] ord-005.json\\n[FILE] ord-006.json\\n[FILE] ord-007.json\\n[FILE] "
+        },
+        {
+          "turn": 3,
+          "tool": "execute",
+          "args": "{\"code\": \"const names = (await filesystem.list_directory({ path: \\\"/tmp/mcptocodemode-demo/orders\\\" })).content.split(\\\"\\\\n\\\").filter(l => l.includes(\\\"[FILE]\\\")).map(l => l.replace(\\\"[FILE] \\\", \\\"\\\").trim());\\nconst out = [];\\nfor (const n of names) {\\n  const r = await filesystem.read_text_file({ path: `/tmp/mcptocodemode-demo/orders/${n}` });\\n  out.push({ n, text: r.content });\\n}\\nreturn out.map(o => o.n + \\\": \\\" + o.text.slice(0, 300));\"}",
+          "resultBytes": 12451,
+          "resultStart": "{\n  \"ok\": true,\n  \"result\": [\n    \"ord-001.json: {\\n  \\\"id\\\": \\\"ord-001\\\",\\n  \\\"customer\\\": \\\"customer-7\\\",\\n  \\\"status\\\": \\\"paid\\\",\\n  \\\"total\\\": 46.99,\\n  \\\"lines\\\": [\\n    {\\n      \\\"sku\\\": \\\"sku-1"
+        },
+        {
+          "turn": 4,
+          "tool": "execute",
+          "args": "{\"code\": \"const names = (await filesystem.list_directory({ path: \\\"/tmp/mcptocodemode-demo/orders\\\" })).content.split(\\\"\\\\n\\\").filter(l => l.includes(\\\"[FILE]\\\")).map(l => l.replace(\\\"[FILE] \\\", \\\"\\\").trim());\\nconst orders = [];\\nfor (const n of names) {\\n  const r = await filesystem.read_text_file({ path: `/tmp/mcptocodemode-demo/orders/${n}` });\\n  orders.push({ n, o: JSON.parse(r.content) });\\n}\\nconst statuses = {};\\nfor (const x of orders) statuses[JSON.stringify(x.o.status)] = (statuses[JSON.stringify(x.o.status)] || 0) + 1;\\nconst paid = orders.filter(x => x.o.status === \\\"paid\\\");\\nco",
+          "resultBytes": 3062,
+          "resultStart": "{\n  \"ok\": true,\n  \"result\": {\n    \"count\": 25,\n    \"statuses\": {\n      \"\\\"paid\\\"\": 19,\n      \"\\\"refunded\\\"\": 6\n    },\n    \"paid\": 19,\n    \"total\": 1906.81,\n    \"types\": [\n      \"number\"\n    ]\n  },\n  \""
+        }
+      ]
+    },
+    {
+      "model": "anthropic/claude-haiku-5.5",
+      "task": "mixed",
+      "arm": "plain",
+      "run": 1,
+      "turns": 2,
+      "toolCalls": 2,
+      "promptTokens": 25408,
+      "completionTokens": 231,
+      "cost": 0.0026563000000000003,
+      "peakPromptTokens": 12869,
+      "ms": 2043,
+      "ok": true,
+      "answer": {
+        "commit": "demo",
+        "hello": "hello from the filesystem server"
+      },
+      "trace": [
+        {
+          "turn": 1,
+          "tool": "git__git_log",
+          "args": "{\"repo_path\": \"/tmp/mcptocodemode-demo-repo\", \"max_count\": 1}",
+          "resultBytes": 133,
+          "resultStart": "\"Commit history:\\nCommit: 4d963ffbb56f56b20f707dcf272a605a5b263c0d\\nAuthor: demo\\nDate: 2026-10-22 16:48:04-06:00\\nMessage: demo\\n\\n\""
+        },
+        {
+          "turn": 1,
+          "tool": "filesystem__read_text_file",
+          "args": "{\"path\": \"/tmp/mcptocodemode-demo/hello.txt\"}",
+          "resultBytes": 48,
+          "resultStart": "{\"content\":\"hello from the filesystem server\\n\"}"
+        }
+      ]
+    },
+    {
+      "model": "anthropic/claude-haiku-5.5",
+      "task": "mixed",
+      "arm": "plain",
+      "run": 2,
+      "turns": 2,
+      "toolCalls": 2,
+      "promptTokens": 25408,
+      "completionTokens": 229,
+      "cost": 0.0026553,
+      "peakPromptTokens": 12869,
+      "ms": 2052,
+      "ok": true,
+      "answer": {
+        "commit": "demo",
+        "hello": "hello from the filesystem server"
+      },
+      "trace": [
+        {
+          "turn": 1,
+          "tool": "git__git_log",
+          "args": "{\"repo_path\": \"/tmp/mcptocodemode-demo-repo\", \"max_count\": 1}",
+          "resultBytes": 133,
+          "resultStart": "\"Commit history:\\nCommit: 4d963ffbb56f56b20f707dcf272a605a5b263c0d\\nAuthor: demo\\nDate: 2026-10-22 16:48:04-06:00\\nMessage: demo\\n\\n\""
+        },
+        {
+          "turn": 1,
+          "tool": "filesystem__read_text_file",
+          "args": "{\"path\": \"/tmp/mcptocodemode-demo/hello.txt\"}",
+          "resultBytes": 48,
+          "resultStart": "{\"content\":\"hello from the filesystem server\\n\"}"
+        }
+      ]
+    },
+    {
+      "model": "anthropic/claude-haiku-5.5",
+      "task": "mixed",
+      "arm": "plain",
+      "run": 3,
+      "turns": 2,
+      "toolCalls": 2,
+      "promptTokens": 25408,
+      "completionTokens": 232,
+      "cost": 0.0026568,
+      "peakPromptTokens": 12869,
+      "ms": 3648,
+      "ok": true,
+      "answer": {
+        "commit": "demo",
+        "hello": "hello from the filesystem server"
+      },
+      "trace": [
+        {
+          "turn": 1,
+          "tool": "git__git_log",
+          "args": "{\"repo_path\": \"/tmp/mcptocodemode-demo-repo\", \"max_count\": 1}",
+          "resultBytes": 133,
+          "resultStart": "\"Commit history:\\nCommit: 4d963ffbb56f56b20f707dcf272a605a5b263c0d\\nAuthor: demo\\nDate: 2026-10-22 16:48:04-06:00\\nMessage: demo\\n\\n\""
+        },
+        {
+          "turn": 1,
+          "tool": "filesystem__read_text_file",
+          "args": "{\"path\": \"/tmp/mcptocodemode-demo/hello.txt\"}",
+          "resultBytes": 48,
+          "resultStart": "{\"content\":\"hello from the filesystem server\\n\"}"
+        }
+      ]
+    },
+    {
+      "model": "anthropic/claude-haiku-5.5",
+      "task": "mixed",
+      "arm": "codemode",
+      "run": 1,
+      "turns": 3,
+      "toolCalls": 3,
+      "promptTokens": 11167,
+      "completionTokens": 277,
+      "cost": 0.0012552000000000002,
+      "peakPromptTokens": 5038,
+      "ms": 2989,
+      "ok": true,
+      "answer": {
+        "commit": "demo",
+        "hello": "hello from the filesystem server"
+      },
+      "trace": [
+        {
+          "turn": 1,
+          "tool": "search",
+          "args": "{\"query\": \"git log commit\"}",
+          "resultBytes": 3557,
+          "resultStart": "{\n  \"servers\": [\n    {\n      \"name\": \"everything\",\n      \"ident\": \"everything\",\n      \"toolCount\": 16\n    },\n    {\n      \"name\": \"filesystem\",\n      \"ident\": \"filesystem\",\n      \"toolCount\": 14\n    },"
+        },
+        {
+          "turn": 1,
+          "tool": "search",
+          "args": "{\"query\": \"read file text\"}",
+          "resultBytes": 4792,
+          "resultStart": "{\n  \"servers\": [\n    {\n      \"name\": \"everything\",\n      \"ident\": \"everything\",\n      \"toolCount\": 16\n    },\n    {\n      \"name\": \"filesystem\",\n      \"ident\": \"filesystem\",\n      \"toolCount\": 14\n    },"
+        },
+        {
+          "turn": 2,
+          "tool": "execute",
+          "args": "{\"code\": \"const log = await git.git_log({ repo_path: \\\"/tmp/mcptocodemode-demo-repo\\\", max_count: 1 });\\nconst file = await filesystem.read_text_file({ path: \\\"/tmp/mcptocodemode-demo/hello.txt\\\" });\\nreturn { log, file };\"}",
+          "resultBytes": 491,
+          "resultStart": "{\n  \"ok\": true,\n  \"result\": {\n    \"log\": \"Commit history:\\nCommit: 4d963ffbb56f56b20f707dcf272a605a5b263c0d\\nAuthor: demo\\nDate: 2026-10-22 16:48:04-06:00\\nMessage: demo\\n\\n\",\n    \"file\": {\n      \"con"
+        }
+      ]
+    },
+    {
+      "model": "anthropic/claude-haiku-5.5",
+      "task": "mixed",
+      "arm": "codemode",
+      "run": 2,
+      "turns": 3,
+      "toolCalls": 3,
+      "promptTokens": 11011,
+      "completionTokens": 278,
+      "cost": 0.0012401,
+      "peakPromptTokens": 4960,
+      "ms": 3064,
+      "ok": true,
+      "answer": {
+        "commit": "demo",
+        "hello": "hello from the filesystem server"
+      },
+      "trace": [
+        {
+          "turn": 1,
+          "tool": "search",
+          "args": "{\"query\": \"git log commit\"}",
+          "resultBytes": 3557,
+          "resultStart": "{\n  \"servers\": [\n    {\n      \"name\": \"everything\",\n      \"ident\": \"everything\",\n      \"toolCount\": 16\n    },\n    {\n      \"name\": \"filesystem\",\n      \"ident\": \"filesystem\",\n      \"toolCount\": 14\n    },"
+        },
+        {
+          "turn": 1,
+          "tool": "search",
+          "args": "{\"query\": \"read file\"}",
+          "resultBytes": 4511,
+          "resultStart": "{\n  \"servers\": [\n    {\n      \"name\": \"everything\",\n      \"ident\": \"everything\",\n      \"toolCount\": 16\n    },\n    {\n      \"name\": \"filesystem\",\n      \"ident\": \"filesystem\",\n      \"toolCount\": 14\n    },"
+        },
+        {
+          "turn": 2,
+          "tool": "execute",
+          "args": "{\"code\": \"const log = await git.git_log({ repo_path: \\\"/tmp/mcptocodemode-demo-repo\\\", max_count: 1 });\\nconst file = await filesystem.read_text_file({ path: \\\"/tmp/mcptocodemode-demo/hello.txt\\\" });\\nreturn { log, file };\"}",
+          "resultBytes": 491,
+          "resultStart": "{\n  \"ok\": true,\n  \"result\": {\n    \"log\": \"Commit history:\\nCommit: 4d963ffbb56f56b20f707dcf272a605a5b263c0d\\nAuthor: demo\\nDate: 2026-10-22 16:48:04-06:00\\nMessage: demo\\n\\n\",\n    \"file\": {\n      \"con"
+        }
+      ]
+    },
+    {
+      "model": "anthropic/claude-haiku-5.5",
+      "task": "mixed",
+      "arm": "codemode",
+      "run": 3,
+      "turns": 3,
+      "toolCalls": 3,
+      "promptTokens": 11171,
+      "completionTokens": 260,
+      "cost": 0.0012471000000000001,
+      "peakPromptTokens": 5040,
+      "ms": 2953,
+      "ok": true,
+      "answer": {
+        "commit": "demo",
+        "hello": "hello from the filesystem server"
+      },
+      "trace": [
+        {
+          "turn": 1,
+          "tool": "search",
+          "args": "{\"query\": \"git log commit repository\"}",
+          "resultBytes": 3557,
+          "resultStart": "{\n  \"servers\": [\n    {\n      \"name\": \"everything\",\n      \"ident\": \"everything\",\n      \"toolCount\": 16\n    },\n    {\n      \"name\": \"filesystem\",\n      \"ident\": \"filesystem\",\n      \"toolCount\": 14\n    },"
+        },
+        {
+          "turn": 1,
+          "tool": "search",
+          "args": "{\"query\": \"read file text\"}",
+          "resultBytes": 4792,
+          "resultStart": "{\n  \"servers\": [\n    {\n      \"name\": \"everything\",\n      \"ident\": \"everything\",\n      \"toolCount\": 16\n    },\n    {\n      \"name\": \"filesystem\",\n      \"ident\": \"filesystem\",\n      \"toolCount\": 14\n    },"
+        },
+        {
+          "turn": 2,
+          "tool": "execute",
+          "args": "{\"code\": \"const log = await git.git_log({ repo_path: \\\"/tmp/mcptocodemode-demo-repo\\\", max_count: 1 });\\nconst file = await filesystem.read_text_file({ path: \\\"/tmp/mcptocodemode-demo/hello.txt\\\" });\\nreturn { log, file };\"}",
+          "resultBytes": 491,
+          "resultStart": "{\n  \"ok\": true,\n  \"result\": {\n    \"log\": \"Commit history:\\nCommit: 4d963ffbb56f56b20f707dcf272a605a5b263c0d\\nAuthor: demo\\nDate: 2026-10-22 16:48:04-06:00\\nMessage: demo\\n\\n\",\n    \"file\": {\n      \"con"
+        }
+      ]
+    },
+    {
+      "model": "anthropic/claude-sonnet-5.5",
+      "task": "log",
+      "arm": "plain",
+      "run": 1,
+      "turns": 2,
+      "toolCalls": 1,
+      "promptTokens": 101244,
+      "completionTokens": 180,
+      "cost": 0.204288,
+      "peakPromptTokens": 88729,
+      "ms": 4868,
+      "ok": true,
+      "answer": {
+        "errors": 20,
+        "lastJob": 1940
+      },
+      "trace": [
+        {
+          "turn": 1,
+          "tool": "filesystem__read_text_file",
+          "args": "{\"path\": \"/tmp/mcptocodemode-demo/service.log\"}",
+          "resultBytes": 129977,
+          "resultStart": "{\"content\":\"2026-10-22T09:00:01.000Z INFO  http GET /api/orders/1 200 17ms\\n2026-10-22T09:00:02.000Z INFO  http GET /api/orders/2 200 30ms\\n2026-10-22T09:00:03.000Z INFO  http GET /api/orders/3 200 43"
+        }
+      ]
+    },
+    {
+      "model": "anthropic/claude-sonnet-5.5",
+      "task": "log",
+      "arm": "plain",
+      "run": 2,
+      "turns": 2,
+      "toolCalls": 1,
+      "promptTokens": 101244,
+      "completionTokens": 275,
+      "cost": 0.205238,
+      "peakPromptTokens": 88729,
+      "ms": 4811,
+      "ok": true,
+      "answer": {
+        "errors": 20,
+        "lastJob": 1940
+      },
+      "trace": [
+        {
+          "turn": 1,
+          "tool": "filesystem__read_text_file",
+          "args": "{\"path\": \"/tmp/mcptocodemode-demo/service.log\"}",
+          "resultBytes": 129977,
+          "resultStart": "{\"content\":\"2026-10-22T09:00:01.000Z INFO  http GET /api/orders/1 200 17ms\\n2026-10-22T09:00:02.000Z INFO  http GET /api/orders/2 200 30ms\\n2026-10-22T09:00:03.000Z INFO  http GET /api/orders/3 200 43"
+        }
+      ]
+    },
+    {
+      "model": "anthropic/claude-sonnet-5.5",
+      "task": "log",
+      "arm": "plain",
+      "run": 3,
+      "turns": 2,
+      "toolCalls": 1,
+      "promptTokens": 101244,
+      "completionTokens": 180,
+      "cost": 0.204288,
+      "peakPromptTokens": 88729,
+      "ms": 3397,
+      "ok": true,
+      "answer": {
+        "errors": 20,
+        "lastJob": 1940
+      },
+      "trace": [
+        {
+          "turn": 1,
+          "tool": "filesystem__read_text_file",
+          "args": "{\"path\": \"/tmp/mcptocodemode-demo/service.log\"}",
+          "resultBytes": 129977,
+          "resultStart": "{\"content\":\"2026-10-22T09:00:01.000Z INFO  http GET /api/orders/1 200 17ms\\n2026-10-22T09:00:02.000Z INFO  http GET /api/orders/2 200 30ms\\n2026-10-22T09:00:03.000Z INFO  http GET /api/orders/3 200 43"
+        }
+      ]
+    },
+    {
+      "model": "anthropic/claude-sonnet-5.5",
+      "task": "log",
+      "arm": "codemode",
+      "run": 1,
+      "turns": 3,
+      "toolCalls": 2,
+      "promptTokens": 8093,
+      "completionTokens": 229,
+      "cost": 0.018476,
+      "peakPromptTokens": 3546,
+      "ms": 3246,
+      "ok": true,
+      "answer": {
+        "errors": 20,
+        "lastJob": 1940
+      },
+      "trace": [
+        {
+          "turn": 1,
+          "tool": "search",
+          "args": "{\"query\": \"read file\"}",
+          "resultBytes": 4511,
+          "resultStart": "{\n  \"servers\": [\n    {\n      \"name\": \"everything\",\n      \"ident\": \"everything\",\n      \"toolCount\": 16\n    },\n    {\n      \"name\": \"filesystem\",\n      \"ident\": \"filesystem\",\n      \"toolCount\": 14\n    },"
+        },
+        {
+          "turn": 2,
+          "tool": "execute",
+          "args": "{\"code\": \"const r = await filesystem.read_text_file({path:\\\"/tmp/mcptocodemode-demo/service.log\\\"});\\nconst lines = r.content.split(\\\"\\\\n\\\");\\nconst e = lines.filter(l=>l.includes(\\\" ERROR \\\"));\\nreturn {n:e.length,last:e[e.length-1], total:lines.length, sample:lines.slice(0,3)};\"}",
+          "resultBytes": 548,
+          "resultStart": "{\n  \"ok\": true,\n  \"result\": {\n    \"n\": 20,\n    \"last\": \"2026-10-22T09:32:20.000Z ERROR payment-worker job=1940 upstream timed out after 30000 ms\",\n    \"total\": 2001,\n    \"sample\": [\n      \"2026-10-22T"
+        }
+      ]
+    },
+    {
+      "model": "anthropic/claude-sonnet-5.5",
+      "task": "log",
+      "arm": "codemode",
+      "run": 2,
+      "turns": 3,
+      "toolCalls": 2,
+      "promptTokens": 8093,
+      "completionTokens": 229,
+      "cost": 0.018476,
+      "peakPromptTokens": 3546,
+      "ms": 4948,
+      "ok": true,
+      "answer": {
+        "errors": 20,
+        "lastJob": 1940
+      },
+      "trace": [
+        {
+          "turn": 1,
+          "tool": "search",
+          "args": "{\"query\": \"read file\"}",
+          "resultBytes": 4511,
+          "resultStart": "{\n  \"servers\": [\n    {\n      \"name\": \"everything\",\n      \"ident\": \"everything\",\n      \"toolCount\": 16\n    },\n    {\n      \"name\": \"filesystem\",\n      \"ident\": \"filesystem\",\n      \"toolCount\": 14\n    },"
+        },
+        {
+          "turn": 2,
+          "tool": "execute",
+          "args": "{\"code\": \"const r = await filesystem.read_text_file({path:\\\"/tmp/mcptocodemode-demo/service.log\\\"});\\nconst lines = r.content.split(\\\"\\\\n\\\");\\nconst e = lines.filter(l=>l.includes(\\\" ERROR \\\"));\\nreturn {n:e.length,last:e[e.length-1],total:lines.length, sample:lines.slice(0,3)};\"}",
+          "resultBytes": 548,
+          "resultStart": "{\n  \"ok\": true,\n  \"result\": {\n    \"n\": 20,\n    \"last\": \"2026-10-22T09:32:20.000Z ERROR payment-worker job=1940 upstream timed out after 30000 ms\",\n    \"total\": 2001,\n    \"sample\": [\n      \"2026-10-22T"
+        }
+      ]
+    },
+    {
+      "model": "anthropic/claude-sonnet-5.5",
+      "task": "log",
+      "arm": "codemode",
+      "run": 3,
+      "turns": 3,
+      "toolCalls": 2,
+      "promptTokens": 8093,
+      "completionTokens": 229,
+      "cost": 0.018476,
+      "peakPromptTokens": 3546,
+      "ms": 3248,
+      "ok": true,
+      "answer": {
+        "errors": 20,
+        "lastJob": 1940
+      },
+      "trace": [
+        {
+          "turn": 1,
+          "tool": "search",
+          "args": "{\"query\": \"read file\"}",
+          "resultBytes": 4511,
+          "resultStart": "{\n  \"servers\": [\n    {\n      \"name\": \"everything\",\n      \"ident\": \"everything\",\n      \"toolCount\": 16\n    },\n    {\n      \"name\": \"filesystem\",\n      \"ident\": \"filesystem\",\n      \"toolCount\": 14\n    },"
+        },
+        {
+          "turn": 2,
+          "tool": "execute",
+          "args": "{\"code\": \"const r = await filesystem.read_text_file({path:\\\"/tmp/mcptocodemode-demo/service.log\\\"});\\nconst lines = r.content.split(\\\"\\\\n\\\");\\nconst e = lines.filter(l=>l.includes(\\\" ERROR \\\"));\\nreturn {n:e.length,last:e[e.length-1],total:lines.length, sample:lines.slice(0,3)};\"}",
+          "resultBytes": 548,
+          "resultStart": "{\n  \"ok\": true,\n  \"result\": {\n    \"n\": 20,\n    \"last\": \"2026-10-22T09:32:20.000Z ERROR payment-worker job=1940 upstream timed out after 30000 ms\",\n    \"total\": 2001,\n    \"sample\": [\n      \"2026-10-22T"
+        }
+      ]
+    },
+    {
+      "model": "anthropic/claude-sonnet-5.5",
+      "task": "orders",
+      "arm": "plain",
+      "run": 1,
+      "turns": 3,
+      "toolCalls": 2,
+      "promptTokens": 46875,
+      "completionTokens": 1083,
+      "cost": 0.10458,
+      "peakPromptTokens": 21428,
+      "ms": 8669,
+      "ok": true,
+      "answer": {
+        "paid": 19,
+        "total": 1906.81
+      },
+      "trace": [
+        {
+          "turn": 1,
+          "tool": "filesystem__list_directory",
+          "args": "{\"path\": \"/tmp/mcptocodemode-demo/orders\"}",
+          "resultBytes": 537,
+          "resultStart": "{\"content\":\"[FILE] ord-001.json\\n[FILE] ord-002.json\\n[FILE] ord-003.json\\n[FILE] ord-004.json\\n[FILE] ord-005.json\\n[FILE] ord-006.json\\n[FILE] ord-007.json\\n[FILE] ord-008.json\\n[FILE] ord-009.json\\"
+        },
+        {
+          "turn": 2,
+          "tool": "filesystem__read_multiple_files",
+          "args": "{\"paths\": [\"/tmp/mcptocodemode-demo/orders/ord-001.json\",\"/tmp/mcptocodemode-demo/orders/ord-002.json\",\"/tmp/mcptocodemode-demo/orders/ord-003.json\",\"/tmp/mcptocodemode-demo/orders/ord-004.json\",\"/tmp/mcptocodemode-demo/orders/ord-005.json\",\"/tmp/mcptocodemode-demo/orders/ord-006.json\",\"/tmp/mcptocodemode-demo/orders/ord-007.json\",\"/tmp/mcptocodemode-demo/orders/ord-008.json\",\"/tmp/mcptocodemode-demo/orders/ord-009.json\",\"/tmp/mcptocodemode-demo/orders/ord-010.json\",\"/tmp/mcptocodemode-demo/orders/ord-011.json\",\"/tmp/mcptocodemode-demo/orders/ord-012.json\",\"/tmp/mcptocodemode-demo/orders/ord-0",
+          "resultBytes": 13194,
+          "resultStart": "{\"content\":\"/tmp/mcptocodemode-demo/orders/ord-001.json:\\n{\\n  \\\"id\\\": \\\"ord-001\\\",\\n  \\\"customer\\\": \\\"customer-7\\\",\\n  \\\"status\\\": \\\"paid\\\",\\n  \\\"total\\\": 46.99,\\n  \\\"lines\\\": [\\n    {\\n      \\\"sku\\\""
+        }
+      ]
+    },
+    {
+      "model": "anthropic/claude-sonnet-5.5",
+      "task": "orders",
+      "arm": "plain",
+      "run": 2,
+      "turns": 3,
+      "toolCalls": 2,
+      "promptTokens": 46875,
+      "completionTokens": 1083,
+      "cost": 0.10458,
+      "peakPromptTokens": 21428,
+      "ms": 8248,
+      "ok": true,
+      "answer": {
+        "paid": 19,
+        "total": 1906.81
+      },
+      "trace": [
+        {
+          "turn": 1,
+          "tool": "filesystem__list_directory",
+          "args": "{\"path\": \"/tmp/mcptocodemode-demo/orders\"}",
+          "resultBytes": 537,
+          "resultStart": "{\"content\":\"[FILE] ord-001.json\\n[FILE] ord-002.json\\n[FILE] ord-003.json\\n[FILE] ord-004.json\\n[FILE] ord-005.json\\n[FILE] ord-006.json\\n[FILE] ord-007.json\\n[FILE] ord-008.json\\n[FILE] ord-009.json\\"
+        },
+        {
+          "turn": 2,
+          "tool": "filesystem__read_multiple_files",
+          "args": "{\"paths\": [\"/tmp/mcptocodemode-demo/orders/ord-001.json\",\"/tmp/mcptocodemode-demo/orders/ord-002.json\",\"/tmp/mcptocodemode-demo/orders/ord-003.json\",\"/tmp/mcptocodemode-demo/orders/ord-004.json\",\"/tmp/mcptocodemode-demo/orders/ord-005.json\",\"/tmp/mcptocodemode-demo/orders/ord-006.json\",\"/tmp/mcptocodemode-demo/orders/ord-007.json\",\"/tmp/mcptocodemode-demo/orders/ord-008.json\",\"/tmp/mcptocodemode-demo/orders/ord-009.json\",\"/tmp/mcptocodemode-demo/orders/ord-010.json\",\"/tmp/mcptocodemode-demo/orders/ord-011.json\",\"/tmp/mcptocodemode-demo/orders/ord-012.json\",\"/tmp/mcptocodemode-demo/orders/ord-0",
+          "resultBytes": 13194,
+          "resultStart": "{\"content\":\"/tmp/mcptocodemode-demo/orders/ord-001.json:\\n{\\n  \\\"id\\\": \\\"ord-001\\\",\\n  \\\"customer\\\": \\\"customer-7\\\",\\n  \\\"status\\\": \\\"paid\\\",\\n  \\\"total\\\": 46.99,\\n  \\\"lines\\\": [\\n    {\\n      \\\"sku\\\""
+        }
+      ]
+    },
+    {
+      "model": "anthropic/claude-sonnet-5.5",
+      "task": "orders",
+      "arm": "plain",
+      "run": 3,
+      "turns": 3,
+      "toolCalls": 2,
+      "promptTokens": 46875,
+      "completionTokens": 1083,
+      "cost": 0.10458,
+      "peakPromptTokens": 21428,
+      "ms": 8175,
+      "ok": true,
+      "answer": {
+        "paid": 19,
+        "total": 1906.81
+      },
+      "trace": [
+        {
+          "turn": 1,
+          "tool": "filesystem__list_directory",
+          "args": "{\"path\": \"/tmp/mcptocodemode-demo/orders\"}",
+          "resultBytes": 537,
+          "resultStart": "{\"content\":\"[FILE] ord-001.json\\n[FILE] ord-002.json\\n[FILE] ord-003.json\\n[FILE] ord-004.json\\n[FILE] ord-005.json\\n[FILE] ord-006.json\\n[FILE] ord-007.json\\n[FILE] ord-008.json\\n[FILE] ord-009.json\\"
+        },
+        {
+          "turn": 2,
+          "tool": "filesystem__read_multiple_files",
+          "args": "{\"paths\": [\"/tmp/mcptocodemode-demo/orders/ord-001.json\",\"/tmp/mcptocodemode-demo/orders/ord-002.json\",\"/tmp/mcptocodemode-demo/orders/ord-003.json\",\"/tmp/mcptocodemode-demo/orders/ord-004.json\",\"/tmp/mcptocodemode-demo/orders/ord-005.json\",\"/tmp/mcptocodemode-demo/orders/ord-006.json\",\"/tmp/mcptocodemode-demo/orders/ord-007.json\",\"/tmp/mcptocodemode-demo/orders/ord-008.json\",\"/tmp/mcptocodemode-demo/orders/ord-009.json\",\"/tmp/mcptocodemode-demo/orders/ord-010.json\",\"/tmp/mcptocodemode-demo/orders/ord-011.json\",\"/tmp/mcptocodemode-demo/orders/ord-012.json\",\"/tmp/mcptocodemode-demo/orders/ord-0",
+          "resultBytes": 13194,
+          "resultStart": "{\"content\":\"/tmp/mcptocodemode-demo/orders/ord-001.json:\\n{\\n  \\\"id\\\": \\\"ord-001\\\",\\n  \\\"customer\\\": \\\"customer-7\\\",\\n  \\\"status\\\": \\\"paid\\\",\\n  \\\"total\\\": 46.99,\\n  \\\"lines\\\": [\\n    {\\n      \\\"sku\\\""
+        }
+      ]
+    },
+    {
+      "model": "anthropic/claude-sonnet-5.5",
+      "task": "orders",
+      "arm": "codemode",
+      "run": 1,
+      "turns": 3,
+      "toolCalls": 2,
+      "promptTokens": 8314,
+      "completionTokens": 622,
+      "cost": 0.022848,
+      "peakPromptTokens": 3805,
+      "ms": 7850,
+      "ok": true,
+      "answer": {
+        "paid": 19,
+        "total": 1906.81
+      },
+      "trace": [
+        {
+          "turn": 1,
+          "tool": "search",
+          "args": "{\"query\": \"read files in directory\"}",
+          "resultBytes": 4403,
+          "resultStart": "{\n  \"servers\": [\n    {\n      \"name\": \"everything\",\n      \"ident\": \"everything\",\n      \"toolCount\": 16\n    },\n    {\n      \"name\": \"filesystem\",\n      \"ident\": \"filesystem\",\n      \"toolCount\": 14\n    },"
+        },
+        {
+          "turn": 2,
+          "tool": "execute",
+          "args": "{\"code\": \"const l = await filesystem.list_directory({path:\\\"/tmp/mcptocodemode-demo/orders\\\"});\\nconst text = l.content;\\nconst files = text.split(\\\"\\\\n\\\").filter(x=>x.startsWith(\\\"[FILE]\\\")).map(x=>x.slice(7).trim());\\nlet paid=0,total=0,bad=[];\\nfor (let i=0;i<files.length;i+=50){\\n  const chunk=files.slice(i,i+50);\\n  const r = await filesystem.read_multiple_files({paths:chunk.map(f=>\\\"/tmp/mcptocodemode-demo/orders/\\\"+f)});\\n  const parts = r.content.split(/\\\\n---\\\\n/);\\n  for (const p of parts){\\n    const idx=p.indexOf(\\\"{\\\");\\n    if(idx<0){bad.push(p.slice(0,50));continue;}\\n    try{co",
+          "resultBytes": 582,
+          "resultStart": "{\n  \"ok\": true,\n  \"result\": {\n    \"n\": 25,\n    \"paid\": 19,\n    \"total\": 1906.81,\n    \"bad\": [],\n    \"sample\": \"[FILE] ord-001.json\\n[FILE] ord-002.json\\n[FILE] ord-003.json\\n[FILE] ord-004.json\\n[FILE"
+        }
+      ]
+    },
+    {
+      "model": "anthropic/claude-sonnet-5.5",
+      "task": "orders",
+      "arm": "codemode",
+      "run": 2,
+      "turns": 4,
+      "toolCalls": 3,
+      "promptTokens": 14002,
+      "completionTokens": 666,
+      "cost": 0.034664,
+      "peakPromptTokens": 5533,
+      "ms": 5896,
+      "ok": true,
+      "answer": {
+        "paid": 19,
+        "total": 1906.81
+      },
+      "trace": [
+        {
+          "turn": 1,
+          "tool": "search",
+          "args": "{\"query\": \"read files in directory\"}",
+          "resultBytes": 4403,
+          "resultStart": "{\n  \"servers\": [\n    {\n      \"name\": \"everything\",\n      \"ident\": \"everything\",\n      \"toolCount\": 16\n    },\n    {\n      \"name\": \"filesystem\",\n      \"ident\": \"filesystem\",\n      \"toolCount\": 14\n    },"
+        },
+        {
+          "turn": 2,
+          "tool": "execute",
+          "args": "{\"code\": \"const r = await filesystem.list_directory({path:\\\"/tmp/mcptocodemode-demo/orders\\\"});\\nconst text = r.content;\\nconst files = text.split(\\\"\\\\n\\\").filter(l=>l.startsWith(\\\"[FILE]\\\")).map(l=>l.slice(7).trim());\\nconsole.log(files.length, files.slice(0,3));\\nconst out=[];\\nfor (let i=0;i<files.length;i+=50){\\n const rr = await filesystem.read_multiple_files({paths:files.slice(i,i+50).map(f=>\\\"/tmp/mcptocodemode-demo/orders/\\\"+f)});\\n out.push(rr.content);\\n}\\nconst all=out.join(\\\"\\\\n\\\");\\nconsole.log(all.slice(0,600));\\nreturn {n:files.length, len:all.length};\"}",
+          "resultBytes": 1094,
+          "resultStart": "{\n  \"ok\": true,\n  \"result\": {\n    \"n\": 25,\n    \"len\": 11237\n  },\n  \"logs\": [\n    \"25 [\\\"ord-001.json\\\",\\\"ord-002.json\\\",\\\"ord-003.json\\\"]\",\n    \"/tmp/mcptocodemode-demo/orders/ord-001.json:\\n{\\n  \\\"id"
+        },
+        {
+          "turn": 3,
+          "tool": "execute",
+          "args": "{\"code\": \"const r = await filesystem.list_directory({path:\\\"/tmp/mcptocodemode-demo/orders\\\"});\\nconst files = r.content.split(\\\"\\\\n\\\").filter(l=>l.startsWith(\\\"[FILE]\\\")).map(l=>l.slice(7).trim());\\nlet paid=0,sum=0,statuses={};\\nfor (const f of files){\\n const rr = await filesystem.read_text_file({path:\\\"/tmp/mcptocodemode-demo/orders/\\\"+f});\\n const o=JSON.parse(rr.content);\\n statuses[o.status]=(statuses[o.status]||0)+1;\\n if(o.status===\\\"paid\\\"){paid++;sum+=o.total;}\\n}\\nreturn {files:files.length,paid,sum:Math.round(sum*100)/100,statuses};\"}",
+          "resultBytes": 3015,
+          "resultStart": "{\n  \"ok\": true,\n  \"result\": {\n    \"files\": 25,\n    \"paid\": 19,\n    \"sum\": 1906.81,\n    \"statuses\": {\n      \"paid\": 19,\n      \"refunded\": 6\n    }\n  },\n  \"logs\": [],\n  \"calls\": [\n    {\n      \"server\": \""
+        }
+      ]
+    },
+    {
+      "model": "anthropic/claude-sonnet-5.5",
+      "task": "orders",
+      "arm": "codemode",
+      "run": 3,
+      "turns": 4,
+      "toolCalls": 3,
+      "promptTokens": 12918,
+      "completionTokens": 673,
+      "cost": 0.032566,
+      "peakPromptTokens": 4483,
+      "ms": 7508,
+      "ok": true,
+      "answer": {
+        "paid": 19,
+        "total": 1906.81
+      },
+      "trace": [
+        {
+          "turn": 1,
+          "tool": "search",
+          "args": "{\"query\": \"read files in directory\"}",
+          "resultBytes": 4403,
+          "resultStart": "{\n  \"servers\": [\n    {\n      \"name\": \"everything\",\n      \"ident\": \"everything\",\n      \"toolCount\": 16\n    },\n    {\n      \"name\": \"filesystem\",\n      \"ident\": \"filesystem\",\n      \"toolCount\": 14\n    },"
+        },
+        {
+          "turn": 2,
+          "tool": "execute",
+          "args": "{\"code\": \"const l=await filesystem.list_directory({path:\\\"/tmp/mcptocodemode-demo/orders\\\"});\\nconst text=l.content;\\nconst files=text.split(\\\"\\\\n\\\").filter(x=>x.startsWith(\\\"[FILE]\\\")).map(x=>x.slice(7).trim());\\nconst r=await filesystem.read_multiple_files({paths:files.map(f=>\\\"/tmp/mcptocodemode-demo/orders/\\\"+f)});\\nreturn {n:files.length, sample:r.content.slice(0,500), len:r.content.length, text:text.slice(0,200)}\"}",
+          "resultBytes": 1144,
+          "resultStart": "{\n  \"ok\": true,\n  \"result\": {\n    \"n\": 25,\n    \"sample\": \"/tmp/mcptocodemode-demo/orders/ord-001.json:\\n{\\n  \\\"id\\\": \\\"ord-001\\\",\\n  \\\"customer\\\": \\\"customer-7\\\",\\n  \\\"status\\\": \\\"paid\\\",\\n  \\\"total\\\""
+        },
+        {
+          "turn": 3,
+          "tool": "execute",
+          "args": "{\"code\": \"const l=await filesystem.list_directory({path:\\\"/tmp/mcptocodemode-demo/orders\\\"});\\nconst files=l.content.split(\\\"\\\\n\\\").filter(x=>x.startsWith(\\\"[FILE]\\\")).map(x=>x.slice(7).trim());\\nconst r=await filesystem.read_multiple_files({paths:files.map(f=>\\\"/tmp/mcptocodemode-demo/orders/\\\"+f)});\\nconst parts=r.content.split(/\\\\n\\\\n---\\\\n/);\\nlet n=0,s=0,c=0;const bad=[];\\nfor(const p of parts){const i=p.indexOf(\\\"{\\\");try{const o=JSON.parse(p.slice(i));c++;if(o.status===\\\"paid\\\"){n++;s+=o.total}}catch(e){bad.push(p.slice(0,80))}}\\nreturn {c,n,s:Math.round(s*100)/100,bad,files:files.lengt",
+          "resultBytes": 381,
+          "resultStart": "{\n  \"ok\": true,\n  \"result\": {\n    \"c\": 25,\n    \"n\": 19,\n    \"s\": 1906.81,\n    \"bad\": [],\n    \"files\": 25,\n    \"other\": []\n  },\n  \"logs\": [],\n  \"calls\": [\n    {\n      \"server\": \"filesystem\",\n      \"met"
+        }
+      ]
+    },
+    {
+      "model": "anthropic/claude-sonnet-5.5",
+      "task": "mixed",
+      "arm": "plain",
+      "run": 1,
+      "turns": 2,
+      "toolCalls": 2,
+      "promptTokens": 25408,
+      "completionTokens": 190,
+      "cost": 0.052716,
+      "peakPromptTokens": 12869,
+      "ms": 2423,
+      "ok": true,
+      "answer": {
+        "commit": "demo",
+        "hello": "hello from the filesystem server"
+      },
+      "trace": [
+        {
+          "turn": 1,
+          "tool": "git__git_log",
+          "args": "{\"repo_path\": \"/tmp/mcptocodemode-demo-repo\", \"max_count\": 1}",
+          "resultBytes": 133,
+          "resultStart": "\"Commit history:\\nCommit: 4d963ffbb56f56b20f707dcf272a605a5b263c0d\\nAuthor: demo\\nDate: 2026-10-22 16:48:04-06:00\\nMessage: demo\\n\\n\""
+        },
+        {
+          "turn": 1,
+          "tool": "filesystem__read_text_file",
+          "args": "{\"path\": \"/tmp/mcptocodemode-demo/hello.txt\"}",
+          "resultBytes": 48,
+          "resultStart": "{\"content\":\"hello from the filesystem server\\n\"}"
+        }
+      ]
+    },
+    {
+      "model": "anthropic/claude-sonnet-5.5",
+      "task": "mixed",
+      "arm": "plain",
+      "run": 2,
+      "turns": 2,
+      "toolCalls": 2,
+      "promptTokens": 25408,
+      "completionTokens": 190,
+      "cost": 0.052716,
+      "peakPromptTokens": 12869,
+      "ms": 2579,
+      "ok": true,
+      "answer": {
+        "commit": "demo",
+        "hello": "hello from the filesystem server"
+      },
+      "trace": [
+        {
+          "turn": 1,
+          "tool": "git__git_log",
+          "args": "{\"repo_path\": \"/tmp/mcptocodemode-demo-repo\", \"max_count\": 1}",
+          "resultBytes": 133,
+          "resultStart": "\"Commit history:\\nCommit: 4d963ffbb56f56b20f707dcf272a605a5b263c0d\\nAuthor: demo\\nDate: 2026-10-22 16:48:04-06:00\\nMessage: demo\\n\\n\""
+        },
+        {
+          "turn": 1,
+          "tool": "filesystem__read_text_file",
+          "args": "{\"path\": \"/tmp/mcptocodemode-demo/hello.txt\"}",
+          "resultBytes": 48,
+          "resultStart": "{\"content\":\"hello from the filesystem server\\n\"}"
+        }
+      ]
+    },
+    {
+      "model": "anthropic/claude-sonnet-5.5",
+      "task": "mixed",
+      "arm": "plain",
+      "run": 3,
+      "turns": 2,
+      "toolCalls": 2,
+      "promptTokens": 25408,
+      "completionTokens": 190,
+      "cost": 0.052716,
+      "peakPromptTokens": 12869,
+      "ms": 2357,
+      "ok": true,
+      "answer": {
+        "commit": "demo",
+        "hello": "hello from the filesystem server"
+      },
+      "trace": [
+        {
+          "turn": 1,
+          "tool": "git__git_log",
+          "args": "{\"repo_path\": \"/tmp/mcptocodemode-demo-repo\", \"max_count\": 1}",
+          "resultBytes": 133,
+          "resultStart": "\"Commit history:\\nCommit: 4d963ffbb56f56b20f707dcf272a605a5b263c0d\\nAuthor: demo\\nDate: 2026-10-22 16:48:04-06:00\\nMessage: demo\\n\\n\""
+        },
+        {
+          "turn": 1,
+          "tool": "filesystem__read_text_file",
+          "args": "{\"path\": \"/tmp/mcptocodemode-demo/hello.txt\"}",
+          "resultBytes": 48,
+          "resultStart": "{\"content\":\"hello from the filesystem server\\n\"}"
+        }
+      ]
+    },
+    {
+      "model": "anthropic/claude-sonnet-5.5",
+      "task": "mixed",
+      "arm": "codemode",
+      "run": 1,
+      "turns": 3,
+      "toolCalls": 3,
+      "promptTokens": 10943,
+      "completionTokens": 257,
+      "cost": 0.024456,
+      "peakPromptTokens": 4924,
+      "ms": 3330,
+      "ok": true,
+      "answer": {
+        "commit": "demo",
+        "hello": "hello from the filesystem server"
+      },
+      "trace": [
+        {
+          "turn": 1,
+          "tool": "search",
+          "args": "{\"query\": \"git log latest commit\"}",
+          "resultBytes": 3557,
+          "resultStart": "{\n  \"servers\": [\n    {\n      \"name\": \"everything\",\n      \"ident\": \"everything\",\n      \"toolCount\": 16\n    },\n    {\n      \"name\": \"filesystem\",\n      \"ident\": \"filesystem\",\n      \"toolCount\": 14\n    },"
+        },
+        {
+          "turn": 1,
+          "tool": "search",
+          "args": "{\"query\": \"read file contents\"}",
+          "resultBytes": 4457,
+          "resultStart": "{\n  \"servers\": [\n    {\n      \"name\": \"everything\",\n      \"ident\": \"everything\",\n      \"toolCount\": 16\n    },\n    {\n      \"name\": \"filesystem\",\n      \"ident\": \"filesystem\",\n      \"toolCount\": 14\n    },"
+        },
+        {
+          "turn": 2,
+          "tool": "execute",
+          "args": "{\"code\": \"const l = await git.git_log({repo_path:\\\"/tmp/mcptocodemode-demo-repo\\\",max_count:1});\\nconst f = await filesystem.read_text_file({path:\\\"/tmp/mcptocodemode-demo/hello.txt\\\"});\\nreturn {l, f};\"}",
+          "resultBytes": 486,
+          "resultStart": "{\n  \"ok\": true,\n  \"result\": {\n    \"l\": \"Commit history:\\nCommit: 4d963ffbb56f56b20f707dcf272a605a5b263c0d\\nAuthor: demo\\nDate: 2026-10-22 16:48:04-06:00\\nMessage: demo\\n\\n\",\n    \"f\": {\n      \"content\""
+        }
+      ]
+    },
+    {
+      "model": "anthropic/claude-sonnet-5.5",
+      "task": "mixed",
+      "arm": "codemode",
+      "run": 2,
+      "turns": 3,
+      "toolCalls": 3,
+      "promptTokens": 10943,
+      "completionTokens": 257,
+      "cost": 0.024456,
+      "peakPromptTokens": 4924,
+      "ms": 3318,
+      "ok": true,
+      "answer": {
+        "commit": "demo",
+        "hello": "hello from the filesystem server"
+      },
+      "trace": [
+        {
+          "turn": 1,
+          "tool": "search",
+          "args": "{\"query\": \"git log latest commit\"}",
+          "resultBytes": 3557,
+          "resultStart": "{\n  \"servers\": [\n    {\n      \"name\": \"everything\",\n      \"ident\": \"everything\",\n      \"toolCount\": 16\n    },\n    {\n      \"name\": \"filesystem\",\n      \"ident\": \"filesystem\",\n      \"toolCount\": 14\n    },"
+        },
+        {
+          "turn": 1,
+          "tool": "search",
+          "args": "{\"query\": \"read file contents\"}",
+          "resultBytes": 4457,
+          "resultStart": "{\n  \"servers\": [\n    {\n      \"name\": \"everything\",\n      \"ident\": \"everything\",\n      \"toolCount\": 16\n    },\n    {\n      \"name\": \"filesystem\",\n      \"ident\": \"filesystem\",\n      \"toolCount\": 14\n    },"
+        },
+        {
+          "turn": 2,
+          "tool": "execute",
+          "args": "{\"code\": \"const l = await git.git_log({repo_path:\\\"/tmp/mcptocodemode-demo-repo\\\", max_count:1});\\nconst f = await filesystem.read_text_file({path:\\\"/tmp/mcptocodemode-demo/hello.txt\\\"});\\nreturn {l, f};\"}",
+          "resultBytes": 486,
+          "resultStart": "{\n  \"ok\": true,\n  \"result\": {\n    \"l\": \"Commit history:\\nCommit: 4d963ffbb56f56b20f707dcf272a605a5b263c0d\\nAuthor: demo\\nDate: 2026-10-22 16:48:04-06:00\\nMessage: demo\\n\\n\",\n    \"f\": {\n      \"content\""
+        }
+      ]
+    },
+    {
+      "model": "anthropic/claude-sonnet-5.5",
+      "task": "mixed",
+      "arm": "codemode",
+      "run": 3,
+      "turns": 3,
+      "toolCalls": 3,
+      "promptTokens": 11007,
+      "completionTokens": 253,
+      "cost": 0.024544,
+      "peakPromptTokens": 4956,
+      "ms": 3432,
+      "ok": true,
+      "answer": {
+        "commit": "demo",
+        "hello": "hello from the filesystem server"
+      },
+      "trace": [
+        {
+          "turn": 1,
+          "tool": "search",
+          "args": "{\"query\": \"git log commit\"}",
+          "resultBytes": 3557,
+          "resultStart": "{\n  \"servers\": [\n    {\n      \"name\": \"everything\",\n      \"ident\": \"everything\",\n      \"toolCount\": 16\n    },\n    {\n      \"name\": \"filesystem\",\n      \"ident\": \"filesystem\",\n      \"toolCount\": 14\n    },"
+        },
+        {
+          "turn": 1,
+          "tool": "search",
+          "args": "{\"query\": \"read file\"}",
+          "resultBytes": 4511,
+          "resultStart": "{\n  \"servers\": [\n    {\n      \"name\": \"everything\",\n      \"ident\": \"everything\",\n      \"toolCount\": 16\n    },\n    {\n      \"name\": \"filesystem\",\n      \"ident\": \"filesystem\",\n      \"toolCount\": 14\n    },"
+        },
+        {
+          "turn": 2,
+          "tool": "execute",
+          "args": "{\"code\": \"const l = await git.git_log({repo_path:\\\"/tmp/mcptocodemode-demo-repo\\\", max_count:1});\\nconst f = await filesystem.read_text_file({path:\\\"/tmp/mcptocodemode-demo/hello.txt\\\"});\\nreturn {l, f};\"}",
+          "resultBytes": 486,
+          "resultStart": "{\n  \"ok\": true,\n  \"result\": {\n    \"l\": \"Commit history:\\nCommit: 4d963ffbb56f56b20f707dcf272a605a5b263c0d\\nAuthor: demo\\nDate: 2026-10-22 16:48:04-06:00\\nMessage: demo\\n\\n\",\n    \"f\": {\n      \"content\""
+        }
+      ]
+    }
+  ]
+}

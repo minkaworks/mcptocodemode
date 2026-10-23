@@ -6,14 +6,27 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Fixed
+
+- An array of a union type renders as `(A | B)[]` instead of `A | B[]`.
+- The agent's own entry for MCPtoCodeMode no longer shows up in `list` and `search` as a server that did not connect. A nested copy answers the handshake as `mcptocodemode`, the parent drops that entry, and the cache remembers it so the next start does not launch it.
+- OpenCode's `{env:VAR}` placeholders expand.
+
 ### Added
 
-- A release workflow. Pushing a tag `vX.Y.Z` checks the version, the changelog, and the package contents, publishes to npm with provenance through trusted publishing, and creates the GitHub release from `CHANGELOG.md`.
+- Discovery reads OpenCode (`~/.config/opencode/opencode.json[c]`, `opencode.json[c]`), Pi (`~/.pi/agent/mcp.json`, `.pi/mcp.json`, `~/.config/mcp/mcp.json`), and project `.codex/config.toml`. OpenCode's `mcp` map, `type: "local" | "remote"`, command arrays, and `environment` are accepted.
+- The README has a setup for Claude Code, Codex, Grok, Cursor, OpenCode, Pi, and any other MCP client.
+- A release workflow. Pushing a tag `vX.Y.Z` checks the version, the changelog, and the package contents, publishes to npm with provenance through trusted publishing, and creates the GitHub release from `CHANGELOG.md`. A prerelease tag such as `v0.3.0-rc.1` publishes under the npm tag `next` and takes its notes from `Unreleased`.
 - `scripts/release.mjs`, with `notes` to print a version's changelog section and `check` to verify a package before it publishes. CI runs `check` on every pull request.
 - GitHub releases for 0.1.1, 0.2.0, and 0.2.1.
+- Signatures in `describe`, `search`, and `mcptocodemode sdk` show what a method resolves to, from the tool's `outputSchema`, instead of `Promise<unknown>`. Protocol methods have their own return types. With the reference servers, 28 of 55 tools declare one.
+- MCP tool annotations: `search` and `describe` are read-only and idempotent, `execute` may write. Codex approves the first two without asking.
+- `scripts/bench-model.mjs` runs the same tasks through a model twice, with every tool exposed directly and through MCPtoCodeMode, and records turns, tokens, cost, and a per-turn trace. It uses OpenRouter.
 
 ### Changed
 
+- The `execute` description tells the model to compute its answer in the code, that a method resolves to the value in its signature and not to the `{ ok, result }` envelope, and to sample a `Promise<unknown>` value before returning it.
+- The tool cache format is 2. Entries written by 0.2.x are ignored once and rewritten with output schemas.
 - Repository standard revision 2: a Releases section, the package check in CI, and SHA pins for a workflow that publishes.
 
 ## [0.2.1] - 2026-10-22

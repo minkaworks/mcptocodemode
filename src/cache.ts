@@ -6,7 +6,7 @@ import type { ServerSpec } from "./config.js";
 import type { ListedTool } from "./types.js";
 
 /** Bump when the stored shape changes. Old entries are then ignored. */
-const FORMAT = 1;
+const FORMAT = 2;
 
 /**
  * Tool lists from earlier connects, one entry per server spec. A server with
@@ -15,6 +15,9 @@ const FORMAT = 1;
 export type CatalogCache = {
   read(spec: ServerSpec): ListedTool[] | undefined;
   write(spec: ServerSpec, tools: ListedTool[]): void;
+  /** True when this spec turned out to launch mcptocodemode itself. */
+  isSelf(spec: ServerSpec): boolean;
+  markSelf(spec: ServerSpec): void;
 };
 
 /**
@@ -46,30 +49,44 @@ export function defaultCacheDir(env: NodeJS.ProcessEnv = process.env, home = os.
 /** A cache in a directory. A missing or unreadable entry is a miss, and a failed write is ignored. */
 export function fileCache(dir: string): CatalogCache {
   const file = (spec: ServerSpec) => path.join(dir, `${specKey(spec)}.json`);
+  const load = (spec: ServerSpec): { format?: unknown; tools?: unknown; self?: unknown } | undefined => {
+    try {
+      return JSON.parse(readFileSync(file(spec), "utf8")) as { format?: unknown; tools?: unknown; self?: unknown };
+    } catch {
+      return undefined;
+    }
+  };
+  const store = (spec: ServerSpec, body: Record<string, unknown>) => {
+    try {
+      mkdirSync(dir, { recursive: true, mode: 0o700 });
+      const target = file(spec);
+      const temp = `${target}.${process.pid}.tmp`;
+      writeFileSync(temp, `${JSON.stringify({ format: FORMAT, server: spec.name, savedAt: new Date().toISOString(), ...body })}\n`, {
+        mode: 0o600,
+      });
+      renameSync(temp, target);
+    } catch {
+      // The cache only saves time. Serving continues without it.
+    }
+  };
   return {
     read(spec) {
-      try {
-        const stored = JSON.parse(readFileSync(file(spec), "utf8")) as { format?: unknown; tools?: unknown };
-        if (stored.format !== FORMAT || !Array.isArray(stored.tools)) return undefined;
-        const tools = stored.tools.filter(
-          (tool): tool is ListedTool => typeof tool === "object" && tool !== null && typeof tool.name === "string",
-        );
-        return tools.length === stored.tools.length ? tools : undefined;
-      } catch {
-        return undefined;
-      }
+      const stored = load(spec);
+      if (stored?.format !== FORMAT || !Array.isArray(stored.tools)) return undefined;
+      const tools = stored.tools.filter(
+        (tool): tool is ListedTool => typeof tool === "object" && tool !== null && typeof tool.name === "string",
+      );
+      return tools.length === stored.tools.length ? tools : undefined;
     },
     write(spec, tools) {
-      try {
-        mkdirSync(dir, { recursive: true, mode: 0o700 });
-        const target = file(spec);
-        const temp = `${target}.${process.pid}.tmp`;
-        const body = { format: FORMAT, server: spec.name, savedAt: new Date().toISOString(), tools };
-        writeFileSync(temp, `${JSON.stringify(body)}\n`, { mode: 0o600 });
-        renameSync(temp, target);
-      } catch {
-        // The cache only saves time. Serving continues without it.
-      }
+      store(spec, { tools });
+    },
+    isSelf(spec) {
+      const stored = load(spec);
+      return stored?.format === FORMAT && stored.self === true;
+    },
+    markSelf(spec) {
+      store(spec, { self: true });
     },
   };
 }

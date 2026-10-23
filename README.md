@@ -8,7 +8,7 @@ One MCP server in front of all the MCP servers you already use. Your model sees 
 npx -y mcptocodemode list
 ```
 
-That finds the MCP servers already configured on your machine (Claude, Codex, Cursor, VS Code, Grok), connects to them, and prints what the model will be able to call.
+That finds the MCP servers already configured on your machine (Claude Code, Codex, Cursor, Grok, OpenCode, Pi, VS Code), connects to them, and prints what the model will be able to call.
 
 ## Why
 
@@ -30,37 +30,83 @@ The code runs in a sandbox with no network, no filesystem, and no credentials. I
 
 ## Benchmarks
 
-Seven official [reference servers](https://github.com/modelcontextprotocol/servers), 55 tools, measured with `pnpm measure`. Method, raw data, and caveats are in [REPORT.md](REPORT.md).
+Seven official [reference servers](https://github.com/modelcontextprotocol/servers), 55 tools. Method, raw data, and caveats are in [REPORT.md](REPORT.md).
+
+With Claude Sonnet 5.5 doing three real tasks, three runs each, through OpenRouter:
 
 | | Plain MCP | MCPtoCodeMode |
 | --- | ---: | ---: |
-| Tool definitions in every prompt | 31,179 bytes | **2,581 bytes** |
-| Count errors in a 2,000-line log: bytes back to the model | 129,977 | **402** |
-| Total 25 order files: model turns | 26 | **1** |
-| Total 25 order files: context re-read across turns | 172,698 bytes | **1,822 bytes** |
-| Startup: first `search` answered, tools cached | 1,697 ms (v0.1.1) | **314 ms** |
+| Correct answers | 9 / 9 | 9 / 9 |
+| Input tokens | 520,581 | **92,406** (5.6× fewer) |
+| Cost | $1.086 | **$0.219** (5× less) |
+| Tokens to count errors in a 2,000-line log | 101,244 | **8,093** |
+| Model turns | 21 | 29 |
 
-The 2,581 bytes stay the same however many servers you add. MCPtoCodeMode does not make the servers themselves faster. It cuts what goes into the prompt and the turns between calls. No model was in the loop for these numbers.
+Same answers, a fifth of the cost. It takes a few more turns: the model usually searches once before it writes the program.
+
+Without a model in the loop:
+
+| | Plain MCP | MCPtoCodeMode |
+| --- | ---: | ---: |
+| Tool definitions in every prompt | 31,179 bytes | **2,581 bytes**, however many servers you add |
+| Count errors in a 2,000-line log: bytes back to the model | 129,977 | **402** |
+| Startup: first `search` answered, tools cached | 1,697 ms (v0.1.1) | **314 ms** |
 
 ## Use it
 
-Claude Code:
+Add one server to your coding agent. It finds the servers you already configured for any of these agents, so you don't move them.
+
+**Claude Code**
 
 ```bash
 claude mcp add codemode -- npx -y mcptocodemode serve
 ```
 
-Any other MCP client:
+**Codex** — `~/.codex/config.toml`
 
-```json
-{
-  "mcpServers": {
-    "codemode": { "command": "npx", "args": ["-y", "mcptocodemode", "serve"] }
-  }
-}
+```toml
+[mcp_servers.codemode]
+command = "npx"
+args = ["-y", "mcptocodemode", "serve"]
+# Optional: also approve execute without asking. search and describe are read-only and need no approval.
+# default_tools_approval_mode = "approve"
 ```
 
-You can leave your other servers configured. MCPtoCodeMode reads those same configs and skips its own entry. Remove the other servers from the client if you want the model to see only the three tools.
+`execute` is marked as able to write, because the code can call any of your tools, so Codex asks before each run unless you set the line above.
+
+**Grok** — `~/.grok/config.toml`, same table as Codex. Grok starts a server from a project's `.grok/config.toml` only in a trusted folder (`grok --trust`).
+
+**Cursor** — `~/.cursor/mcp.json` or `.cursor/mcp.json`
+
+```json
+{ "mcpServers": { "codemode": { "command": "npx", "args": ["-y", "mcptocodemode", "serve"] } } }
+```
+
+**OpenCode** — `~/.config/opencode/opencode.json` or `opencode.json`
+
+```json
+{ "mcp": { "codemode": { "type": "local", "command": ["npx", "-y", "mcptocodemode", "serve"] } } }
+```
+
+OpenCode 2 has a code mode of its own and wraps MCP tools in it, so the model ends up calling `execute` through OpenCode's `execute`. It works, but it is slower than in agents without one.
+
+**Pi**
+
+```bash
+pi mcp add codemode -- npx -y mcptocodemode serve
+```
+
+**Any other agent or provider.** MCPtoCodeMode is a stdio MCP server, so anything that speaks MCP can run it. The whole setup is one command:
+
+```bash
+npx -y mcptocodemode serve --config /path/to/servers.json
+```
+
+`servers.json` uses the standard `mcpServers` format above. Leave `--config` out to use the configs it discovers. If your agent has no MCP support, the [library](#library) gives you the same three tools to wire into any model API.
+
+MCPtoCodeMode skips its own entry when it reads these configs. Remove your other servers from the agent if you want the model to see only the three tools.
+
+Tested end to end, each agent answering a question through the three tools while MCPtoCodeMode read that agent's config: Claude Code 2.1, Codex 0.163, OpenCode 2.1, Pi 1.3, and Grok 1.0. Cursor's config format is covered by tests; its agent was not run.
 
 ## How it works
 
@@ -76,11 +122,11 @@ Every server also has `resources.list`, `resources.read`, `resources.templates`,
 
 With no flags, `serve` reads the MCP configs on your machine, in this order. A later server with the same name wins.
 
-- `~/.codex/config.toml`, Claude Desktop, `~/.claude.json` (including the servers Claude Code stores for this project), `~/.cursor/mcp.json`, `~/.grok/config.toml`
-- from the git root down to the current directory: `.mcp.json`, `mcp.json`, `.cursor/mcp.json`, `.vscode/mcp.json`, `.grok/config.toml`
+- `~/.codex/config.toml`, Claude Desktop, `~/.claude.json` (including the servers Claude Code stores for this project), `~/.cursor/mcp.json`, `~/.grok/config.toml`, `~/.config/opencode/opencode.json[c]`, `~/.config/mcp/mcp.json`, `~/.pi/agent/mcp.json`
+- from the git root down to the current directory: `.mcp.json`, `mcp.json`, `.cursor/mcp.json`, `.vscode/mcp.json`, `.grok/config.toml`, `.codex/config.toml`, `opencode.json[c]`, `.pi/mcp.json`
 - `./mcptocodemode.config.json`
 
-It accepts standard `mcpServers` JSON, VS Code `servers` JSON, and Codex or Grok `[mcp_servers.name]` TOML, over stdio, streamable HTTP, or SSE. `${VAR}` and `${VAR:-default}` expand from the environment.
+It accepts standard `mcpServers` JSON, VS Code `servers` JSON, OpenCode `mcp` JSON or JSONC, and Codex or Grok `[mcp_servers.name]` TOML, over stdio, streamable HTTP, or SSE. `${VAR}` and `${VAR:-default}` expand from the environment.
 
 | Option | Effect |
 | --- | --- |

@@ -68,7 +68,7 @@ Hits do not include JSON Schemas. The first three hits of a non-empty query carr
 
 `target` is a server ident (`notes`) or `server.method` (`notes.get`, `notes.resources.read`). The first `.` separates the server from the method. The method may itself contain dots.
 
-The result is TypeScript for that namespace or method. A namespace listing may omit methods once it passes a size budget. The omitted methods remain available through `describe("server.method")`.
+The result is TypeScript for that namespace or method. A method's return type is the tool's `outputSchema` when the server declares one, since the sandbox receives `structuredContent` for such a tool. Without one it is `unknown`. Protocol methods have fixed return types. A namespace listing may omit methods once it passes a size budget. The omitted methods remain available through `describe("server.method")`.
 
 Describing a server that did not connect returns the connect error and no methods.
 

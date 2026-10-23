@@ -1,7 +1,7 @@
 {
   "name": "mcptocodemode",
   "version": "0.2.1",
-  "description": "Turn any set of MCP servers into one Code Mode server: search, describe, execute.",
+  "description": "Stop flooding your agent's prompt with MCP tools: MCPtoCodeMode puts every MCP server behind 3 tools and a sandbox, for Codex, Claude Code, Cursor, Grok, OpenCode, Pi, or any MCP client.",
   "author": "dqniel",
   "keywords": [
     "mcp",
@@ -38,6 +38,7 @@
     "test": "vitest run",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "measure": "node scripts/measure.mjs",
+    "bench:model": "node scripts/bench-model.mjs",
     "prepack": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\" && tsc -p tsconfig.json"
   },
   "engines": {

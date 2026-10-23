@@ -4,7 +4,8 @@
 //   node scripts/release.mjs check         check the package is publishable
 //   node scripts/release.mjs check v0.2.1  also check the tag matches it
 //
-// `check` expects `dist/` to be built.
+// A prerelease such as 0.3.0-rc.1 takes its notes from `Unreleased` and needs
+// no dated section of its own. `check` expects `dist/` to be built.
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
@@ -29,11 +30,19 @@ if (command === "notes") {
   process.exit(2);
 }
 
-/** The body of `## [version] - date`, without the heading. */
+function isPrerelease(version) {
+  return version.includes("-");
+}
+
+/** The body of `## [version] - date`, or of `## [Unreleased]` for a prerelease, without the heading. */
 function notes(version) {
-  const heading = new RegExp(`^## \\[${escape(version)}\\] - \\d{4}-\\d{2}-\\d{2}$`, "m");
+  const heading = isPrerelease(version)
+    ? /^## \[Unreleased\]$/m
+    : new RegExp(`^## \\[${escape(version)}\\] - \\d{4}-\\d{2}-\\d{2}$`, "m");
   const match = heading.exec(changelog);
-  if (!match) throw new Error(`CHANGELOG.md has no "## [${version}] - YYYY-MM-DD" section`);
+  if (!match) {
+    throw new Error(`CHANGELOG.md has no "## [${isPrerelease(version) ? "Unreleased" : `${version}] - YYYY-MM-DD`}" section`);
+  }
   const rest = changelog.slice(match.index + match[0].length);
   const end = rest.search(/^## \[|^\[[^\]]+\]: /m);
   return (end === -1 ? rest : rest.slice(0, end)).trim();
@@ -49,7 +58,9 @@ function check(tag) {
   } catch (error) {
     problems.push(error.message);
   }
-  if (!changelog.includes(`\n[${version}]: `)) problems.push(`CHANGELOG.md has no [${version}] link`);
+  if (!isPrerelease(version) && !changelog.includes(`\n[${version}]: `)) {
+    problems.push(`CHANGELOG.md has no [${version}] link`);
+  }
 
   // npm 11 rewrites and then drops a bin path written as ./file, so keep it plain.
   for (const [name, file] of Object.entries(pkg.bin ?? {})) {

@@ -26,4 +26,9 @@ describe("schemaToType", () => {
   it("renders an empty closed object as {}", () => {
     expect(schemaToType({ type: "object", properties: {}, additionalProperties: false })).toBe("{}");
   });
+
+  it("parenthesizes an array of a union", () => {
+    expect(schemaToType({ type: "array", items: { anyOf: [{ type: "string" }, { type: "number" }] } })).toBe("(string | number)[]");
+    expect(schemaToType({ type: "array", items: { type: "string" } })).toBe("string[]");
+  });
 });

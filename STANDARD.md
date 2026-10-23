@@ -66,6 +66,7 @@ An adopting repository links to a commit of this file and lists its exceptions. 
 - The workflow creates the GitHub release. Its title is the version and its notes are that version's `CHANGELOG.md` section.
 - Every tag has a GitHub release. A version that never reached the registry says so at the top of its notes.
 - Rerunning the workflow for a tag that already published does not fail on the parts already done.
+- A prerelease version publishes under a registry tag other than the default one, so installing without a version does not pick it up. Its GitHub release is marked as a prerelease.
 
 ### Tree
 

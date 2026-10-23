@@ -16,6 +16,8 @@ export type ListedTool = {
   name: string;
   description?: string;
   inputSchema?: JsonSchema;
+  /** Shape of `structuredContent`, when the server declares it. */
+  outputSchema?: JsonSchema;
 };
 
 export type ToolRecord = {
@@ -29,6 +31,8 @@ export type ToolRecord = {
   method: string;
   description: string;
   inputSchema: JsonSchema;
+  /** What the method resolves to in the sandbox, when known. */
+  outputSchema?: JsonSchema;
   /** Protocol methods are resources and prompts. They are present on every connected server. */
   kind?: "tool" | "protocol";
 };

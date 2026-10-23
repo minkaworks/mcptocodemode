@@ -112,6 +112,10 @@ export async function discoveryPaths(cwd: string, home: string, platform: NodeJS
     path.join(home, ".claude.json"),
     path.join(home, ".cursor", "mcp.json"),
     path.join(home, ".grok", "config.toml"),
+    path.join(home, ".config", "opencode", "opencode.json"),
+    path.join(home, ".config", "opencode", "opencode.jsonc"),
+    path.join(home, ".config", "mcp", "mcp.json"),
+    path.join(home, ".pi", "agent", "mcp.json"),
   ];
   const root = await findProjectRoot(cwd);
   const project: string[] = [];
@@ -122,6 +126,10 @@ export async function discoveryPaths(cwd: string, home: string, platform: NodeJS
       path.join(dir, ".cursor", "mcp.json"),
       path.join(dir, ".vscode", "mcp.json"),
       path.join(dir, ".grok", "config.toml"),
+      path.join(dir, ".codex", "config.toml"),
+      path.join(dir, "opencode.json"),
+      path.join(dir, "opencode.jsonc"),
+      path.join(dir, ".pi", "mcp.json"),
     );
   }
   project.push(path.join(path.resolve(cwd), "mcptocodemode.config.json"));

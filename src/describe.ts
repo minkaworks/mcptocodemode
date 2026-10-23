@@ -1,5 +1,5 @@
 import { findServer, findTool } from "./catalog.js";
-import { inputType } from "./schema.js";
+import { inputType, schemaToType } from "./schema.js";
 import type { Catalog, ServerNamespace, ToolRecord } from "./types.js";
 
 function comment(description: string, max: number): string {
@@ -15,13 +15,18 @@ function signature(name: string, tool: ToolRecord, docChars: number): string {
   const input = inputType(tool.inputSchema, { docChars });
   const optional = input.optional ? "?" : "";
   const header = comment(tool.description, docChars === 160 ? 160 : 2000);
-  return `${header}${name}(input${optional}: ${input.type}): Promise<unknown>;`;
+  return `${header}${name}(input${optional}: ${input.type}): Promise<${outputType(tool, docChars)}>;`;
 }
 
 /** One-line-per-property call signature without the doc header, for search hits. */
 export function compactSignature(server: ServerNamespace, tool: ToolRecord): string {
   const input = inputType(tool.inputSchema, { docChars: 80 });
-  return `${server.ident}.${tool.method}(input${input.optional ? "?" : ""}: ${input.type}): Promise<unknown>`;
+  return `${server.ident}.${tool.method}(input${input.optional ? "?" : ""}: ${input.type}): Promise<${outputType(tool, 80)}>`;
+}
+
+/** The resolved value's type. `unknown` when the server declares no output schema. */
+function outputType(tool: ToolRecord, docChars: number): string {
+  return tool.outputSchema ? schemaToType(tool.outputSchema, 1, { docChars }) : "unknown";
 }
 
 function renderMethod(server: ServerNamespace, tool: ToolRecord, docChars: number): string {

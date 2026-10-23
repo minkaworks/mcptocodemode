@@ -75,6 +75,12 @@ export const DEPTH_ENV = "MCPTOCODEMODE_DEPTH";
 
 export const DEFAULT_CONNECT_TIMEOUT_MS = 60_000;
 
+/** The server name this package answers the MCP handshake with. */
+export const SELF_NAME = "mcptocodemode";
+
+/** A configured server that is mcptocodemode itself, usually the client's own entry for it. */
+export class SelfReferenceError extends Error {}
+
 const PROTOCOL = new Set(["resources.list", "resources.read", "resources.templates", "prompts.list", "prompts.get"]);
 
 export class UpstreamPool {
@@ -95,7 +101,9 @@ export class UpstreamPool {
     this.cache = options.cache;
     this.onFailure = options.onFailure;
     const used = new Set<string>();
-    this.entries = specs.map((spec, index) => ({ spec, ident: uniqueIdent(spec.name, used), index }));
+    // A spec already known to be this server is not launched again.
+    const kept = specs.filter((spec) => !this.cache?.isSelf(spec));
+    this.entries = kept.map((spec, index) => ({ spec, ident: uniqueIdent(spec.name, used), index }));
     this.catalog = { servers: this.entries.map((entry) => ({ name: entry.spec.name, ident: entry.ident, tools: [] })) };
 
     const now: Array<Promise<unknown>> = [];
@@ -162,6 +170,16 @@ export class UpstreamPool {
     await Promise.all(this.entries.map((entry) => entry.client?.close().catch(() => undefined)));
   }
 
+  private drop(entry: Entry): void {
+    const at = this.entries.indexOf(entry);
+    if (at === -1) return;
+    this.entries.splice(at, 1);
+    this.catalog.servers.splice(at, 1);
+    this.entries.forEach((item, index) => {
+      item.index = index;
+    });
+  }
+
   /** Connect once. Later calls share the same attempt, successful or not. */
   private open(entry: Entry): Promise<Session> {
     entry.session ??= connectOne(entry.spec, this.timeoutMs, this.depth).then(
@@ -176,6 +194,12 @@ export class UpstreamPool {
         return session;
       },
       (error: unknown) => {
+        if (error instanceof SelfReferenceError) {
+          // The client's own entry for this server. Drop it without a trace in the catalog.
+          this.cache?.markSelf(entry.spec);
+          this.drop(entry);
+          throw error;
+        }
         const failure = { name: entry.spec.name, message: publicError(error) };
         this.catalog.servers[entry.index] = { name: entry.spec.name, ident: entry.ident, tools: [], error: failure.message };
         this.onFailure?.(failure);
@@ -216,6 +240,9 @@ async function connectOne(spec: ServerSpec, timeoutMs: number, depth: number): P
     const tools = await Promise.race([
       (async () => {
         await client.connect(openTransport(spec, depth));
+        if (client.getServerVersion()?.name === SELF_NAME) {
+          throw new SelfReferenceError(`${spec.name} is mcptocodemode itself`);
+        }
         return listAllTools(client);
       })(),
       deadline,
@@ -261,6 +288,7 @@ async function listAllTools(client: Client): Promise<ListedTool[]> {
         name: tool.name,
         description: tool.description,
         inputSchema: tool.inputSchema as JsonSchema,
+        ...(tool.outputSchema ? { outputSchema: tool.outputSchema as JsonSchema } : {}),
       });
     }
     cursor = page.nextCursor;

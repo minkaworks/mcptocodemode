@@ -18,7 +18,7 @@ pnpm test
 
 `pnpm build` writes `dist/`. `node dist/cli.js serve --config mcptocodemode.config.example.json` starts the notes demo.
 
-`pnpm measure` repeats the comparison in [REPORT.md](REPORT.md). It needs a network connection, `npx`, and `uvx`. CI does not run it.
+`pnpm measure` repeats the comparison in [REPORT.md](REPORT.md). It needs a network connection, `npx`, and `uvx`. `pnpm bench:model` runs the model section after `pnpm measure` has written its fixtures. It needs `OPENROUTER_API_KEY` in the environment or in `.env`, and costs about $1.40 with the default models. CI runs neither.
 
 Node.js 20 stopped receiving security fixes on 30 April 2026. CI still runs it because `engines` allows it. Use 22, 24, or 26 for daily work.
 
@@ -41,6 +41,8 @@ Use the pull request template. CI runs `pnpm typecheck` and `pnpm test` on the l
 3. `git tag -a vX.Y.Z -m vX.Y.Z && git push origin vX.Y.Z`.
 
 [`.github/workflows/release.yml`](.github/workflows/release.yml) checks the tag against the version and the changelog, publishes to npm with provenance through trusted publishing, and creates the GitHub release from that changelog section. Do not run `npm publish` by hand.
+
+To try the pipeline without moving `latest`, set a prerelease version such as `0.3.0-rc.1` and push `v0.3.0-rc.1`. It publishes under the npm tag `next`, takes its notes from `Unreleased`, and its GitHub release is a prerelease.
 
 npm has to trust the workflow once: on npmjs.com, the package settings name `minkaworks/mcptocodemode`, workflow `release.yml`, environment `npm` as the trusted publisher.
 

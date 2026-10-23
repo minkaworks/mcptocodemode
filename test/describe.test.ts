@@ -13,6 +13,11 @@ const catalog = catalogFromServers([
         inputSchema: { type: "object", required: ["calendarId"], properties: { calendarId: { type: "string" } } },
       },
       { name: "delete", description: "A reserved word.", inputSchema: { type: "object", properties: {} } },
+      {
+        name: "read",
+        inputSchema: { type: "object", properties: {} },
+        outputSchema: { type: "object", required: ["content"], properties: { content: { type: "string" } } },
+      },
     ],
   },
   { name: "notes", tools: [{ name: "get", inputSchema: { type: "object", properties: {} } }] },
@@ -31,6 +36,13 @@ describe("describe", () => {
     expect(sdk).toContain("list_events(input: {");
     expect(sdk).toContain("resources: {");
     expect(sdk).toContain("delete_(input?:");
+  });
+
+  it("types the resolved value from outputSchema and leaves the rest unknown", () => {
+    expect(describeTarget(catalog, "google_calendar.read")).toMatch(/Promise<\{\s+content: string;\s+\}>/);
+    expect(describeTarget(catalog, "google_calendar.delete")).toContain("Promise<unknown>");
+    expect(describeTarget(catalog, "notes.resources.read")).toContain("uri: string;");
+    expect(syntaxErrors(renderSdk(catalog))).toEqual([]);
   });
 
   it("keeps the dotted call form for one method", () => {

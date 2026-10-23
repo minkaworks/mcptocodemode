@@ -143,6 +143,40 @@ The 0.1.1 row was measured with the same script against a build of the `v0.1.1` 
 
 The first three hits of a search now carry their TypeScript signature. For five queries against this catalog (`current time timezone`, `read file`, `git log`, `create entities memory`, `fetch url`) the first hit was the method the query was after every time, and the signatures added 550 to 980 bytes to a response of 1,500 to 2,800. A `describe` of one of the eight methods above averages 764 bytes and costs a turn. Whether a model then skips that turn is a question for a run with a model in it.
 
+## With a model
+
+`scripts/bench-model.mjs` gives the same model the same three tasks twice. Plain MCP exposes the 55 tools directly as functions, 32,885 bytes of definitions. MCPtoCodeMode exposes `search`, `describe`, and `execute` through the real MCP server, 2,943 bytes. Each answer is checked against the fixture. Tokens and cost are what OpenRouter reported. Temperature 0, three runs per cell, medians. 23 October 2026.
+
+- **log**: count the `ERROR` lines in the 2,000-line log and give the last job number.
+- **orders**: count the paid orders among 25 files and total them.
+- **mixed**: the latest commit subject from git and the text of a file from filesystem.
+
+| Model | Task | Plain: tokens in | Code Mode: tokens in | Plain: turns | Code Mode: turns | Plain: cost | Code Mode: cost |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| Claude Sonnet 5.5 | log | 101,244 | 8,093 | 2 | 3 | $0.204 | $0.019 |
+| Claude Sonnet 5.5 | orders | 46,875 | 12,918 | 3 | 4 | $0.105 | $0.033 |
+| Claude Sonnet 5.5 | mixed | 25,408 | 10,943 | 2 | 3 | $0.053 | $0.025 |
+| Claude Haiku 5.5 | log | 101,244 | 7,942 | 2 | 3 | $0.011 | $0.001 |
+| Claude Haiku 5.5 | orders | 46,875 | 31,169 | 3 | 5 | $0.005 | $0.004 |
+| Claude Haiku 5.5 | mixed | 25,408 | 11,167 | 2 | 3 | $0.003 | $0.001 |
+
+Across all 18 runs per model:
+
+| | Plain MCP | MCPtoCodeMode |
+| --- | ---: | ---: |
+| Correct answers, Sonnet | 9 / 9 | 9 / 9 |
+| Correct answers, Haiku | 9 / 9 | 9 / 9 |
+| Input tokens, Sonnet | 520,581 | 92,406 (5.6× fewer) |
+| Input tokens, Haiku | 520,581 | 139,453 (3.7× fewer) |
+| Cost, Sonnet | $1.086 | $0.219 (5.0× less) |
+| Turns, Sonnet | 21 | 29 |
+
+Both arms answered every task correctly, so the difference is cost, not accuracy, on tasks this size. Plain MCP needed fewer turns. The models called tools in parallel: the 25 order files went out in one turn, not 25, which the byte-level fan-out above does not assume. MCPtoCodeMode usually spent one extra turn on `search`, and once or twice on fixing a program. Wall clock came out about even, within a second either way per task.
+
+The log task is where output types matter. Before signatures carried `outputSchema`, `filesystem.read_text_file` read as `Promise<unknown>`. Haiku returned the whole file from `execute` to see its shape, then misread the `{ ok, result }` envelope: 5 turns and 242,886 input tokens, more than plain MCP. With `Promise<{ content: string }>` in the signature it filters in the sandbox on the first try: 3 turns and 7,942 tokens.
+
+Raw results, with a per-turn trace of every tool call, are in `experiments/model-bench.json`. Repeat with `OPENROUTER_API_KEY=... pnpm build && pnpm bench:model`. This run cost $1.38.
+
 ## What this does not say
 
-Bytes are not tokens. Dividing by 4 is a stand-in. It does not say a model succeeds more often with one protocol than another, or that a model writes the program used here on the first try. It does not compare stdio, streamable HTTP, and SSE. It does not price a provider's prompt cache. One catalog, one machine, one afternoon.
+Outside the model section, bytes are not tokens and dividing by 4 is a stand-in. The model section covers three small tasks and two models. It does not say how either arm does on long, open-ended work. It does not compare stdio, streamable HTTP, and SSE. It does not price a provider's prompt cache. One catalog, one machine, one afternoon.

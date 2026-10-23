@@ -33,7 +33,8 @@ const BANNED_NAMES = new Set(["__proto__", "constructor", "prototype"]);
 /**
  * Read a config file. Accepts this project's `{ servers: [...] }` JSON,
  * the standard `{ mcpServers: { name: { command | url } } }` JSON used by
- * Claude, Cursor, and VS Code, and Grok/Codex `[mcp_servers.name]` TOML.
+ * Claude, Cursor, VS Code, and Pi, OpenCode's `{ mcp: { name: { type, command: [...] } } }`,
+ * and Grok/Codex `[mcp_servers.name]` TOML.
  */
 export function parseConfig(text: string, filename: string, env: NodeJS.ProcessEnv = process.env): ParsedConfig {
   const format = configFormat(text, filename);
@@ -76,7 +77,7 @@ export function mergeServers(base: ServerSpec[], next: ServerSpec[]): ServerSpec
 
 function configFormat(text: string, filename: string): "json" | "toml" {
   if (filename.endsWith(".toml")) return "toml";
-  if (filename.endsWith(".json")) return "json";
+  if (filename.endsWith(".json") || filename.endsWith(".jsonc")) return "json";
   return text.trimStart().startsWith("{") ? "json" : "toml";
 }
 
@@ -89,6 +90,7 @@ function configFromValue(value: unknown, filename: string, env: NodeJS.ProcessEn
 
   if (isRecord(value.mcpServers)) pushMap(rawServers, value.mcpServers);
   if (isRecord(value.mcp) && isRecord(value.mcp.servers)) pushMap(rawServers, value.mcp.servers);
+  else if (isRecord(value.mcp)) pushMap(rawServers, value.mcp);
   collectServersField(value.servers, filename, rawServers, issues);
   if (isRecord(value.mcp_servers)) pushMap(rawServers, value.mcp_servers);
 
@@ -148,7 +150,9 @@ function normalizeServer(
   }
   if (raw.enabled === false) return undefined;
 
-  const command = optionalString(raw.command, env);
+  // OpenCode writes the command and its arguments as one array.
+  const commandParts = Array.isArray(raw.command) ? stringArray(raw.command, env) ?? [] : [];
+  const command = commandParts.length > 0 ? commandParts[0] : optionalString(raw.command, env);
   const url = optionalString(raw.url ?? raw.httpUrl, env);
   const declared = transportOf(raw.type ?? raw.transport);
   if (declared.error) {
@@ -175,9 +179,9 @@ function normalizeServer(
 
   const spec: ServerSpec = { name, transport };
   if (command) spec.command = command;
-  const args = stringArray(raw.args, env);
-  if (args) spec.args = args;
-  const vars = stringRecord(raw.env, env);
+  const args = [...commandParts.slice(1), ...(stringArray(raw.args, env) ?? [])];
+  if (args.length > 0) spec.args = args;
+  const vars = stringRecord(raw.env ?? raw.environment, env);
   if (vars) spec.env = vars;
   const cwd = optionalString(raw.cwd, env);
   if (cwd) spec.cwd = cwd;
@@ -193,7 +197,8 @@ function transportOf(value: unknown): { transport?: ServerTransport; error?: str
   const type = value.toLowerCase().replace(/_/g, "-");
   if (type === "sse") return { transport: "sse" };
   if (type === "http" || type === "streamable-http") return { transport: "http" };
-  if (type === "stdio") return { transport: "stdio" };
+  if (type === "stdio" || type === "local") return { transport: "stdio" };
+  if (type === "remote") return { transport: "http" };
   return { error: `unknown transport "${value}"` };
 }
 
@@ -216,14 +221,19 @@ function readLimits(value: unknown, filename: string, issues: string[]): Partial
   return limits;
 }
 
-/** Expand `${VAR}` and `${VAR:-default}` from the process environment. Missing names stay literal. */
+/**
+ * Expand `${VAR}` and `${VAR:-default}`, and OpenCode's `{env:VAR}`, from the
+ * process environment. Missing names stay literal.
+ */
 export function expandText(value: string, env: NodeJS.ProcessEnv): string {
-  return value.replace(/\$\{([A-Za-z_][A-Za-z0-9_]*)(?::-([^}]*))?\}/g, (full, name: string, fallback: string | undefined) => {
-    const current = env[name];
-    if (current !== undefined) return current;
-    if (fallback !== undefined) return fallback;
-    return full;
-  });
+  return value
+    .replace(/\$\{([A-Za-z_][A-Za-z0-9_]*)(?::-([^}]*))?\}/g, (full, name: string, fallback: string | undefined) => {
+      const current = env[name];
+      if (current !== undefined) return current;
+      if (fallback !== undefined) return fallback;
+      return full;
+    })
+    .replace(/\{env:([A-Za-z_][A-Za-z0-9_]*)\}/g, (full, name: string) => env[name] ?? full);
 }
 
 function optionalString(value: unknown, env: NodeJS.ProcessEnv): string | undefined {

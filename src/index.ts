@@ -29,6 +29,8 @@ export { toIdent, uniqueIdent } from "./ident.js";
 export {
   DEFAULT_CONNECT_TIMEOUT_MS,
   DEPTH_ENV,
+  SELF_NAME,
+  SelfReferenceError,
   UpstreamPool,
   callUpstreamTool,
   childEnv,

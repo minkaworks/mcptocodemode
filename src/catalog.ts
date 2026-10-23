@@ -3,11 +3,29 @@ import type { Catalog, JsonSchema, ListedTool, ServerNamespace, ToolRecord } fro
 
 const EMPTY_INPUT: JsonSchema = { type: "object", properties: {}, additionalProperties: false };
 
-const PROTOCOL_METHODS: Array<{ method: string; description: string; inputSchema: JsonSchema }> = [
+const RESOURCE_TEXT: JsonSchema = {
+  type: "object",
+  required: ["uri"],
+  properties: {
+    uri: { type: "string" },
+    mimeType: { type: "string" },
+    text: { description: "Resource text. JSON text is parsed." },
+    omitted: { type: "boolean", description: "True for a blob, which is not copied in." },
+  },
+};
+
+const NAMED_LIST = (extra: Record<string, JsonSchema>): JsonSchema => ({
+  type: "array",
+  items: { type: "object", required: ["name"], properties: { name: { type: "string" }, description: { type: "string" }, ...extra } },
+});
+
+/** Output shapes match what `callProtocol` in upstream.ts returns. */
+const PROTOCOL_METHODS: Array<{ method: string; description: string; inputSchema: JsonSchema; outputSchema: JsonSchema }> = [
   {
     method: "resources.list",
     description: "List resources this MCP server exposes.",
     inputSchema: EMPTY_INPUT,
+    outputSchema: NAMED_LIST({ uri: { type: "string" }, mimeType: { type: "string" }, size: { type: "number" } }),
   },
   {
     method: "resources.read",
@@ -18,16 +36,21 @@ const PROTOCOL_METHODS: Array<{ method: string; description: string; inputSchema
       additionalProperties: false,
       properties: { uri: { type: "string", description: "Resource URI." } },
     },
+    outputSchema: { anyOf: [RESOURCE_TEXT, { type: "array", items: RESOURCE_TEXT }] },
   },
   {
     method: "resources.templates",
     description: "List resource URI templates on this MCP server.",
     inputSchema: EMPTY_INPUT,
+    outputSchema: NAMED_LIST({ uriTemplate: { type: "string" }, mimeType: { type: "string" } }),
   },
   {
     method: "prompts.list",
     description: "List prompts this MCP server exposes.",
     inputSchema: EMPTY_INPUT,
+    outputSchema: NAMED_LIST({
+      arguments: NAMED_LIST({ required: { type: "boolean" } }),
+    }),
   },
   {
     method: "prompts.get",
@@ -42,6 +65,21 @@ const PROTOCOL_METHODS: Array<{ method: string; description: string; inputSchema
           type: "object",
           description: "Prompt arguments. Values are strings.",
           additionalProperties: { type: "string" },
+        },
+      },
+    },
+    outputSchema: {
+      type: "object",
+      required: ["messages"],
+      properties: {
+        description: { type: "string" },
+        messages: {
+          type: "array",
+          items: {
+            type: "object",
+            required: ["role", "content"],
+            properties: { role: { enum: ["user", "assistant"] }, content: { type: "object", properties: { type: { type: "string" }, text: { type: "string" } } } },
+          },
         },
       },
     },
@@ -61,6 +99,7 @@ function protocolRecords(serverName: string, ident: string): ToolRecord[] {
     method: method.method,
     description: method.description,
     inputSchema: method.inputSchema,
+    outputSchema: method.outputSchema,
     kind: "protocol",
   }));
 }
@@ -80,6 +119,7 @@ export function namespaceWithIdent(serverName: string, ident: string, tools: Lis
     method: uniqueIdent(tool.name, usedMethods),
     description: (tool.description ?? "").trim(),
     inputSchema: asSchema(tool.inputSchema),
+    ...(tool.outputSchema && typeof tool.outputSchema === "object" ? { outputSchema: tool.outputSchema } : {}),
     kind: "tool",
   }));
   return { name: serverName, ident, tools: [...protocolRecords(serverName, ident), ...records] };

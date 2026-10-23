@@ -39,6 +39,10 @@ describe("MCP surface", () => {
 
     const listed = await client.listTools();
     expect(listed.tools.map((tool) => tool.name).sort()).toEqual(["describe", "execute", "search"]);
+    const annotations = Object.fromEntries(listed.tools.map((tool) => [tool.name, tool.annotations]));
+    expect(annotations.search?.readOnlyHint).toBe(true);
+    expect(annotations.describe?.readOnlyHint).toBe(true);
+    expect(annotations.execute).toMatchObject({ readOnlyHint: false, destructiveHint: true });
 
     const found = await client.callTool({ name: "search", arguments: { query: "labels" } });
     expect(JSON.stringify(found)).toContain("list_labels");
