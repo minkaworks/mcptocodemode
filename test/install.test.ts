@@ -110,4 +110,13 @@ describe("install", () => {
     await writeFile(file, "{ broken");
     await expect(saveServer(file, "x", {})).rejects.toThrow("Could not read");
   });
+
+  it("names a server by its short name, or by its publisher when the short name is generic", async () => {
+    const { localNameOf } = await import("../src/install.js");
+    expect(localNameOf("io.github.github/github-mcp-server")).toBe("github-mcp-server");
+    expect(localNameOf("com.notion/mcp")).toBe("notion");
+    expect(localNameOf("com.stripe/mcp")).toBe("stripe");
+    expect(localNameOf("io.github.acme/server")).toBe("acme");
+  });
 });
+

@@ -96,7 +96,7 @@ describe("OAuth sign-in", () => {
           saved.push(name);
         },
       }),
-    ).rejects.toThrow('com.acme/mcp is saved as "mcp" and needs you to sign in. Run: npx mcptocodemode login mcp');
-    expect(saved).toEqual(["mcp"]);
+    ).rejects.toThrow('com.acme/mcp is saved as "acme" and needs you to sign in. Run: npx mcptocodemode login acme');
+    expect(saved).toEqual(["acme"]);
   });
 });

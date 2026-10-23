@@ -74,9 +74,16 @@ export async function installServer(name: string, context: InstallContext): Prom
   };
 }
 
-/** `io.github.github/github-mcp-server` becomes `github-mcp-server`. */
+/**
+ * `io.github.github/github-mcp-server` becomes `github-mcp-server`. A generic
+ * short name takes the publisher's instead, so `com.notion/mcp` and
+ * `com.stripe/mcp` become `notion` and `stripe`, not two servers called `mcp`.
+ */
 export function localNameOf(registryName: string): string {
-  return registryName.split("/").pop() || registryName;
+  const [namespace = "", short = ""] = registryName.split("/");
+  if (short && !/^(mcp|mcp-server|server)$/i.test(short)) return short;
+  const label = /^io\.github\.(.+)$/i.exec(namespace)?.[1] ?? namespace.split(".")[1] ?? namespace;
+  return label || registryName;
 }
 
 export function describeInstall(server: RegistryServer, option: InstallOption, savedTo?: string): string {
