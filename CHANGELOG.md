@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-10-22
+
 ### Changed
 
 - `execute` keeps one sandbox isolate for the session instead of a fresh one per call. `let` and `const` still end with each run. The `state` global, and anything else on `globalThis`, carries over, so one run can store threads and the next can filter them. A server named `state` becomes `state_`.
@@ -105,7 +107,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - A reference config for the official servers in [modelcontextprotocol/servers](https://github.com/modelcontextprotocol/servers).
 - [REPORT.md](REPORT.md) and `pnpm measure`, comparing flat MCP, an inline SDK, and progressive Code Mode.
 
-[Unreleased]: https://github.com/minkaworks/mcptocodemode/compare/v0.2.1...HEAD
+[Unreleased]: https://github.com/minkaworks/mcptocodemode/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/minkaworks/mcptocodemode/compare/v0.2.1...v0.3.0
 [0.2.1]: https://github.com/minkaworks/mcptocodemode/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/minkaworks/mcptocodemode/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/minkaworks/mcptocodemode/compare/v0.1.0...v0.1.1
