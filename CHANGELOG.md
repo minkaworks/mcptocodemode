@@ -6,6 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Added
+
+- A release workflow. Pushing a tag `vX.Y.Z` checks the version, the changelog, and the package contents, publishes to npm with provenance through trusted publishing, and creates the GitHub release from `CHANGELOG.md`.
+- `scripts/release.mjs`, with `notes` to print a version's changelog section and `check` to verify a package before it publishes. CI runs `check` on every pull request.
+- GitHub releases for 0.1.1, 0.2.0, and 0.2.1.
+
+### Changed
+
+- Repository standard revision 2: a Releases section, the package check in CI, and SHA pins for a workflow that publishes.
+
 ## [0.2.1] - 2026-10-22
 
 ### Fixed

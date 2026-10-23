@@ -1,6 +1,6 @@
 # minkaworks repository standard
 
-Revision 1, 22 October 2026. This file is the canonical text. `mcptocodemode` is the first repository that follows it.
+Revision 2, 23 October 2026. This file is the canonical text. `mcptocodemode` is the first repository that follows it.
 
 A repository follows the standard when every item in the checklist is true. Write each file for the project it belongs to. The checklist is the requirement. The sentences in the other files of this repository are one implementation of it.
 
@@ -54,7 +54,18 @@ An adopting repository links to a commit of this file and lists its exceptions. 
 - The matrix includes the oldest Node.js major that `engines` allows, and every newer major that Node.js still supports with security fixes, including Current. `CONTRIBUTING.md` names the majors in the matrix today.
 - A major that is past security support stays in the matrix only while `engines` still allows it, and `CONTRIBUTING.md` says that it is past support.
 - Logs do not print secrets. Jobs that need credentials or a live network service are separate from the required check.
-- Actions are pinned to a major release tag. Dependabot bumps those tags. A commit SHA is the pin for a workflow that reads secrets.
+- Actions are pinned to a major release tag. Dependabot bumps those tags. A commit SHA, with the version in a comment, is the pin for a workflow that reads secrets or publishes.
+- A job builds the package and runs the same contents check the release runs, so a package that would publish broken fails on the pull request.
+
+### Releases
+
+- A release is a tag `vX.Y.Z` pushed on a commit of `main`. A workflow publishes it. Nobody publishes from a workstation.
+- Before publishing, the workflow checks that the tag matches the package version, that `CHANGELOG.md` has a dated section and a link for that version, and that the package contains its entry points.
+- The workflow publishes with the registry's trusted publishing (OIDC) and provenance, when the registry offers them. No long-lived registry token is stored as a secret.
+- The publishing job runs in a GitHub environment named for the registry. Only `v*` tags may deploy to it.
+- The workflow creates the GitHub release. Its title is the version and its notes are that version's `CHANGELOG.md` section.
+- Every tag has a GitHub release. A version that never reached the registry says so at the top of its notes.
+- Rerunning the workflow for a tag that already published does not fail on the parts already done.
 
 ### Tree
 
@@ -85,6 +96,7 @@ An adopting repository links to a commit of this file and lists its exceptions. 
 | `.gitattributes` | Line endings |
 | `.gitignore` | Generated files and secrets |
 | `.github/workflows/ci.yml` | Required check |
+| `.github/workflows/release.yml` | Publish a tag and create its release |
 | `.github/dependabot.yml` | Dependency updates |
 | `.github/PULL_REQUEST_TEMPLATE.md` | What a change has to answer |
 | `.github/ISSUE_TEMPLATE/` | Defect, feature, question |
@@ -92,7 +104,7 @@ An adopting repository links to a commit of this file and lists its exceptions. 
 
 ## Outside this standard
 
-A container, a citation file, a notice file, a release bot, a code owner file, and an agent instruction file are added when that project needs them. They are not required here.
+A container, a citation file, a notice file, a code owner file, and an agent instruction file are added when that project needs them. They are not required here.
 
 A project does not grow a feature so that a template has something to describe.
 
@@ -107,6 +119,8 @@ A project does not grow a feature so that a template has something to describe.
 
 Exceptions: none.
 
-Node.js majors in CI on revision 1: 20, 22, 24, and 26. The rule that produced that list is in the CI section. Node.js 20 stopped receiving security fixes on 30 April 2026 and remains only because `engines` says `>=20`.
+Node.js majors in CI on revision 2: 20, 22, 24, and 26. The rule that produced that list is in the CI section. Node.js 20 stopped receiving security fixes on 30 April 2026 and remains only because `engines` says `>=20`.
+
+The registry is npm. The environment is `npm`. The release helper is `scripts/release.mjs` (`notes` and `check`). Revision 2 added the Releases section, the package check in CI, and the SHA pin for a workflow that publishes.
 
 The protocol contract is `SPEC.md`. This file does not change it.

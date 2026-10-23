@@ -34,3 +34,21 @@ jobs:
         run: pnpm typecheck
       - name: Test
         run: pnpm test
+
+  package:
+    name: Package
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          check-latest: true
+          cache: pnpm
+      - name: Install
+        run: pnpm install --frozen-lockfile
+      - name: Build
+        run: pnpm build
+      - name: Check version, changelog, and package contents
+        run: node scripts/release.mjs check

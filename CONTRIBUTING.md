@@ -1,6 +1,6 @@
 # Contributing
 
-This repository follows the [minkaworks repository standard](STANDARD.md), revision 1. Exceptions: none.
+This repository follows the [minkaworks repository standard](STANDARD.md), revision 2. Exceptions: none.
 
 ## License
 
@@ -32,7 +32,17 @@ Node.js 20 stopped receiving security fixes on 30 April 2026. CI still runs it b
 
 ## Pull requests
 
-Use the pull request template. CI runs `pnpm typecheck` and `pnpm test` on the latest patch of Node.js 20, 22, 24, and 26.
+Use the pull request template. CI runs `pnpm typecheck` and `pnpm test` on the latest patch of Node.js 20, 22, 24, and 26, and a package job builds `dist/` and runs `node scripts/release.mjs check`.
+
+## Releases
+
+1. In one commit on `main`, set `version` in `package.json` and move the `Unreleased` entries into a dated `## [X.Y.Z] - YYYY-MM-DD` section, with its compare link at the bottom of `CHANGELOG.md`.
+2. `pnpm build && node scripts/release.mjs check` passes locally.
+3. `git tag -a vX.Y.Z -m vX.Y.Z && git push origin vX.Y.Z`.
+
+[`.github/workflows/release.yml`](.github/workflows/release.yml) checks the tag against the version and the changelog, publishes to npm with provenance through trusted publishing, and creates the GitHub release from that changelog section. Do not run `npm publish` by hand.
+
+npm has to trust the workflow once: on npmjs.com, the package settings name `minkaworks/mcptocodemode`, workflow `release.yml`, environment `npm` as the trusted publisher.
 
 ## Conduct and vulnerabilities
 
