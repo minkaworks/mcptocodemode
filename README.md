@@ -5,10 +5,10 @@
 One MCP server in front of all the MCP servers you already use. Your model sees three tools instead of hundreds, and it writes one short program instead of making dozens of tool calls.
 
 ```bash
-npx -y mcptocodemode list
+npx -y mcptocodemode setup
 ```
 
-That finds the MCP servers already configured on your machine (Claude Code, Codex, Cursor, Grok, OpenCode, Pi, VS Code), connects to them, and prints what the model will be able to call.
+That finds the coding agents on your machine (Claude Code, Codex, Cursor, Grok, OpenCode, Pi, Claude Desktop), lets you pick which ones get MCPtoCodeMode, and adds it after you confirm. It keeps using the MCP servers you already configured for them.
 
 ## Why
 
@@ -57,24 +57,33 @@ Without a model in the loop:
 ## Use it
 
 ```bash
-npx -y mcptocodemode setup
-```
-
-`setup` finds the coding agents on this machine (Claude Code, Codex, Cursor, Grok, OpenCode, Pi, Claude Desktop), lets you pick which ones get MCPtoCodeMode, asks whether to turn on read-only mode and the registry, shows exactly what it will change, and changes it after you confirm. It uses each agent's own `mcp add` command where there is one, and edits the file otherwise, after saving a `.mcptocodemode.bak` copy. `setup --remove` takes it out again. `--agents`, `--read-only`, `--registry`, `--yes`, and `--dry-run` skip the questions.
-
-`npx -y mcptocodemode` runs it without installing. To keep it around, install it globally and you also get the short `cm` command:
-
-```bash
 npm install -g mcptocodemode
-cm find postgres
-cm login notion
+cm setup
 ```
 
-`cm` is only the installed alias. `npx cm` would fetch an unrelated npm package, so with `npx` keep the full name.
+`setup` lists the coding agents it finds with a checkbox each, asks whether to turn on [read-only mode](#read-only-mode) and the [registry](#find-and-install-servers), shows the exact command and every file it will touch, and changes them after you confirm. It uses each agent's own `mcp add` command where there is one, and otherwise edits the file after saving a `.mcptocodemode.bak` copy. Restart the agents afterwards. `cm setup --remove` takes it out again, and `--agents`, `--read-only`, `--registry`, `--yes`, and `--dry-run` skip the questions.
 
-Add one server to your coding agent. It finds the servers you already configured for any of these agents, so you don't move them.
+The global install gives you two names for the same command, `mcptocodemode` and the short `cm`. Without installing, run `npx -y mcptocodemode <command>`; `npx cm` would fetch an unrelated npm package.
 
-**Claude Code**
+MCPtoCodeMode reads the MCP configs your agents already have and skips its own entry, so your servers stay where they are. Remove them from an agent if you want its model to see only the three tools.
+
+### Commands
+
+| Command | What it does |
+| --- | --- |
+| `cm setup` | Add MCPtoCodeMode to the coding agents you pick. `--remove` takes it out. |
+| `cm list` | Connect to every configured server and print what the model can call. |
+| `cm find <words>` | Search the official MCP registry. |
+| `cm index` | Download the registry once so `find` answers instantly. |
+| `cm add <name>` | Save a registry server to your config, after showing what it runs. |
+| `cm remove <server>` | Take a saved server out of your config, with its sign-in. |
+| `cm login <server>` | Sign in to a remote server with OAuth in your browser. `logout` forgets it. |
+| `cm serve` | Run the MCP server. This is what agents start. |
+| `cm sdk --out api.d.ts` | Write the TypeScript the sandbox implements. |
+
+### By hand
+
+Each agent's own config works too. **Claude Code**
 
 ```bash
 claude mcp add codemode -- npx -y mcptocodemode serve
@@ -123,8 +132,6 @@ npx -y mcptocodemode serve --config /path/to/servers.json
 
 `servers.json` uses the standard `mcpServers` format above. Leave `--config` out to use the configs it discovers. If your agent has no MCP support, the [library](#library) gives you the same three tools to wire into any model API.
 
-MCPtoCodeMode skips its own entry when it reads these configs. Remove your other servers from the agent if you want the model to see only the three tools.
-
 Tested end to end, each agent answering a question through the three tools while MCPtoCodeMode read that agent's config: Claude Code 2.1, Codex 0.163, OpenCode 2.1, Pi 1.3, and Grok 1.0. Cursor's config format is covered by tests; its agent was not run.
 
 ## How it works
@@ -133,7 +140,7 @@ The model gets three tools:
 
 - **`search`** finds methods by keyword. The top hits include their TypeScript signature.
 - **`describe`** returns the full signature of a server (`"notes"`) or one method (`"notes.get"`).
-- **`execute`** runs JavaScript. Each server is a global: `await notes.get({ id: "1" })`. Only the return value comes back, plus `console.log` output and a list of which methods ran.
+- **`execute`** runs JavaScript. Each server is a global: `await notes.get({ id: "1" })`. Only the return value comes back, plus `console.log` output and a list of which methods ran. Variables end with each run; whatever the code puts on `state` is there for the next one.
 
 Every server also has `resources.list`, `resources.read`, `resources.templates`, `prompts.list`, and `prompts.get`. Inside `execute`, `codemode.search` and `codemode.describe` work too. The full contract is [SPEC.md](SPEC.md).
 
@@ -162,11 +169,14 @@ Servers connect in parallel. One that fails, or doesn't answer within 60 seconds
 ## Find and install servers
 
 ```bash
-npx -y mcptocodemode find postgres
-npx -y mcptocodemode add io.github.github/github-mcp-server
+cm index
+cm find supabase
+cm add com.supabase/mcp
 ```
 
-`find` searches the [official MCP registry](https://registry.modelcontextprotocol.io), about 48,000 servers. Its own search takes 20 to 40 seconds, so run `index` once: it downloads a local copy into the cache directory, which took one to eight minutes in our runs depending on the registry's load, with progress. After that `find` answers in a second or two and fetches only what changed. `serve --registry` builds the index in the background. Results put the vendor's own server first: `io.github.github` for GitHub, `com.stripe` for Stripe, since the registry verifies those namespaces against the GitHub account or the domain. `add` shows the publisher, the exact command, and the variables it reads, asks you, and saves the server to `~/.config/mcptocodemode/servers.json`, which discovery reads. Variables are saved as `${NAME}`, never their values.
+`find` searches the [official MCP registry](https://registry.modelcontextprotocol.io), about 48,000 servers. The registry's own search takes 20 to 40 seconds, so `index` downloads a local copy into the cache directory first, which took one to eight minutes in our runs depending on the registry's load. After that `find` answers in a second or two and fetches only what changed. `serve --registry` builds the index in the background.
+
+Anyone can publish to the registry, so `find` tags what it can vouch for. `[vendor]` means the publisher is the brand you searched for, `com.supabase` for Supabase or `io.github.github` for GitHub, which the registry verifies against that domain or GitHub account. Those come first. `[owns repo]` means the publisher also owns the repository the entry points at, so it is not a republish of someone else's server. `add` shows the publisher, the exact command, and the variables it reads, asks you, and saves the server to `~/.config/mcptocodemode/servers.json`, which discovery reads. Variables are saved as `${NAME}`, never their values.
 
 Start `serve` with `--registry` and the model can do the same in the conversation. `search` then also lists `available` servers, and the program can call `await codemode.install("io.github.acme/notes")`. Your agent shows you what would run and asks you to confirm; nothing runs until you say yes. The server connects without a restart and the program can use it on the next line. Searching sends the query to the registry only while the local index is being built, which is why `--registry` is off by default.
 
@@ -177,6 +187,8 @@ npx -y mcptocodemode login notion
 ```
 
 Remote servers such as Notion, Linear, or Atlassian ask for an OAuth sign-in. `login` opens your browser, catches the redirect on `127.0.0.1:33418`, and keeps the result in `~/.config/mcptocodemode/oauth/`, readable only by you. `serve` then connects with it and refreshes it as needed. `serve` never opens a browser or registers a client on its own: a server that needs a sign-in fails with the exact `login` command, in `search` and in the error the code sees. `logout <server>` forgets it, and `remove <server>` takes a saved server out of your config along with its sign-in. A server whose config already sends an `Authorization` header does not use any of this.
+
+`login` needs the server to support OAuth dynamic client registration, as Linear, Notion, Atlassian, Stripe, Supabase, Sentry, Vercel, Cloudflare, and Canva do. GitHub's remote server does not, so for GitHub use its local server with a `GITHUB_PERSONAL_ACCESS_TOKEN`.
 
 ## Library
 
@@ -191,7 +203,7 @@ const mode = new CodeMode(catalog, async (call) => ({ id: call.input.id, title: 
 await mode.execute(`return await notes.get({ id: "1" });`);
 ```
 
-`beforeCall` can refuse a method before it runs. `createCodeModeServer(mode)` turns it into an MCP server, and `UpstreamPool` connects to real servers.
+`beforeCall` can refuse a method before it runs, and `readOnlyPolicy` is a ready-made one. `createCodeModeServer(mode)` turns it into an MCP server, and `UpstreamPool` connects to real servers. `RegistryClient` searches the registry, `login` signs in to a remote server, and `runSetup` is the installer behind `cm setup`.
 
 ## Limits and safety
 
