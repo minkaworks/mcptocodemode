@@ -4,10 +4,11 @@
 //
 //   OPENROUTER_API_KEY=... pnpm build && node scripts/bench-model.mjs
 //   BENCH_MODELS=anthropic/claude-haiku-5.5 BENCH_RUNS=1 node scripts/bench-model.mjs
+//   BENCH_APPEND=1 adds this run's results to the existing file instead of replacing them.
 //
 // The key may also sit in .env. Writes experiments/model-bench.json.
 import { execSync } from "node:child_process";
-import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
@@ -27,6 +28,9 @@ const models = (process.env.BENCH_MODELS ?? "anthropic/claude-haiku-5.5,anthropi
 const runs = Number(process.env.BENCH_RUNS ?? 3);
 const onlyTasks = process.env.BENCH_TASKS?.split(",");
 const maxTurns = 40;
+// A run that has spent this much stops and counts as failed, so a model stuck
+// re-reading a large context cannot run up the bill.
+const maxRunCost = Number(process.env.BENCH_MAX_RUN_COST ?? 1);
 const fsRoot = process.env.CODEMODE_FS_ROOT ?? "/tmp/mcptocodemode-demo";
 const gitRepo = process.env.CODEMODE_GIT_REPO ?? "/tmp/mcptocodemode-demo-repo";
 process.env.CODEMODE_FS_ROOT = fsRoot;
@@ -122,6 +126,11 @@ try {
   await pool.close();
 }
 
+const outFile = path.join(root, "experiments", "model-bench.json");
+if (process.env.BENCH_APPEND === "1" && existsSync(outFile)) {
+  results.unshift(...JSON.parse(readFileSync(outFile, "utf8")).results);
+}
+
 const report = {
   at: new Date().toISOString(),
   node: process.version,
@@ -132,7 +141,7 @@ const report = {
   results,
 };
 mkdirSync(path.join(root, "experiments"), { recursive: true });
-writeFileSync(path.join(root, "experiments", "model-bench.json"), `${JSON.stringify(report, null, 2)}\n`);
+writeFileSync(outFile, `${JSON.stringify(report, null, 2)}\n`);
 printSummary(report.summary);
 
 /** Every upstream tool as a function, the way a client that forwards them all presents them. */
@@ -202,6 +211,9 @@ async function runTask(model, task, arm) {
       totals.completionTokens += usage.completion_tokens ?? 0;
       totals.cost += usage.cost ?? 0;
       totals.peakPromptTokens = Math.max(totals.peakPromptTokens, usage.prompt_tokens ?? 0);
+      if (totals.cost > maxRunCost) {
+        return { ...totals, ms: elapsed(started), ok: false, error: `stopped after spending $${totals.cost.toFixed(2)}`, trace };
+      }
       const message = response.choices?.[0]?.message;
       if (!message) throw new Error(`No message: ${JSON.stringify(response).slice(0, 300)}`);
       messages.push({ role: "assistant", content: message.content ?? "", tool_calls: message.tool_calls });

@@ -40,11 +40,11 @@ Use the pull request template. CI runs `pnpm typecheck` and `pnpm test` on the l
 2. `pnpm build && node scripts/release.mjs check` passes locally.
 3. `git tag -a vX.Y.Z -m vX.Y.Z && git push origin vX.Y.Z`.
 
-[`.github/workflows/release.yml`](.github/workflows/release.yml) checks the tag against the version and the changelog, publishes to npm with provenance through trusted publishing, and creates the GitHub release from that changelog section. Do not run `npm publish` by hand.
+[`.github/workflows/release.yml`](.github/workflows/release.yml) checks the tag against the version and the changelog, stages the package on npm with provenance through trusted publishing, and creates the GitHub release from that changelog section. The version goes live when a maintainer approves the staged package with their passkey, on npmjs.com or with `npm stage list mcptocodemode` and `npm stage approve <id>`. Do not run `npm publish` by hand.
 
 To try the pipeline without moving `latest`, set a prerelease version such as `0.3.0-rc.1` and push `v0.3.0-rc.1`. It publishes under the npm tag `next`, takes its notes from `Unreleased`, and its GitHub release is a prerelease.
 
-npm has to trust the workflow once: on npmjs.com, the package settings name `minkaworks/mcptocodemode`, workflow `release.yml`, environment `npm` as the trusted publisher.
+npm trusts the workflow through the package's trusted publisher: `minkaworks/mcptocodemode`, workflow `release.yml`, environment `npm`. It may only stage. Publishing directly is not allowed, so every release needs a maintainer's approval.
 
 ## Conduct and vulnerabilities
 

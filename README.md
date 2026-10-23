@@ -32,17 +32,18 @@ The code runs in a sandbox with no network, no filesystem, and no credentials. I
 
 Seven official [reference servers](https://github.com/modelcontextprotocol/servers), 55 tools. Method, raw data, and caveats are in [REPORT.md](REPORT.md).
 
-With Claude Sonnet 5.5 doing three real tasks, three runs each, through OpenRouter:
+With Claude Sonnet 5.5 on real tasks, through OpenRouter:
 
 | | Plain MCP | MCPtoCodeMode |
 | --- | ---: | ---: |
-| Correct answers | 9 / 9 | 9 / 9 |
-| Input tokens | 520,581 | **92,406** (5.6× fewer) |
-| Cost | $1.086 | **$0.219** (5× less) |
-| Tokens to count errors in a 2,000-line log | 101,244 | **8,093** |
-| Model turns | 21 | 29 |
+| Correct answers, three tasks × 3 runs | 9 / 9 | 9 / 9 |
+| Input tokens for those 9 runs | 531,480 | **94,002** (5.7× fewer) |
+| Cost for those 9 runs | $1.108 | **$0.222** (5× less) |
+| Tokens to count errors in a 2,000-line log | 102,282 | **8,197** |
+| Mail: page through threads, pass a 150 KB image to another tool (1 run) | failed, $0.756, 79 s | **correct**, $0.061, 10 s |
+| Model turns, three tasks × 3 runs | 21 | 29 |
 
-Same answers, a fifth of the cost. It takes a few more turns: the model usually searches once before it writes the program.
+Same answers for a fifth of the cost. On the mail task, which moves a file between tools, plain MCP failed for both Sonnet and Haiku and MCPtoCodeMode got it right, one run each. It takes a few more turns: the model usually searches once before it writes the program.
 
 Without a model in the loop:
 

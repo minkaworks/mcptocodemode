@@ -62,6 +62,7 @@ An adopting repository links to a commit of this file and lists its exceptions. 
 - A release is a tag `vX.Y.Z` pushed on a commit of `main`. A workflow publishes it. Nobody publishes from a workstation.
 - Before publishing, the workflow checks that the tag matches the package version, that `CHANGELOG.md` has a dated section and a link for that version, and that the package contains its entry points.
 - The workflow publishes with the registry's trusted publishing (OIDC) and provenance, when the registry offers them. No long-lived registry token is stored as a secret.
+- When the registry can stage a release for approval, the workflow stages it and a maintainer approves it with their second factor. The trusted publisher is not allowed to publish directly.
 - The publishing job runs in a GitHub environment named for the registry. Only `v*` tags may deploy to it.
 - The workflow creates the GitHub release. Its title is the version and its notes are that version's `CHANGELOG.md` section.
 - Every tag has a GitHub release. A version that never reached the registry says so at the top of its notes.

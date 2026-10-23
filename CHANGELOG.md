@@ -21,7 +21,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - A second `execute` while one is running returns `Another execute is still running.` and leaves the session alone.
 - Images, audio, and resource blobs from tools without `structuredContent` stay in the host as `{ $handle, type, mimeType }`. Passing that object in another call's arguments sends the base64 to that tool. The bytes never enter the sandbox, `logs`, `calls`, or the result. Handles last for the session, up to 8 MiB each and 32 MiB in all; past that the value is `omitted: true` as before.
 - `CodeMode.close()`, `CodeMode.blobs`, `SandboxSession`, and `BlobStore` for library users. `UpstreamPool.call` and `valueFromToolResult` take the blob store.
-- [REPORT.md](REPORT.md) has a Mail section from `scripts/measure-mail.mjs`: paginated search, large bodies, and an image passed between tools. `scripts/bench-model.mjs` has the same task as `BENCH_TASKS=mail`.
+- [REPORT.md](REPORT.md) has a Mail section from `scripts/measure-mail.mjs`: paginated search, large bodies, and an image passed between tools. `scripts/bench-model.mjs` has the same task as `BENCH_TASKS=mail`. With Claude Sonnet 5.5 and Haiku 5.5, plain MCP failed it and MCPtoCodeMode answered it, one run each.
+- `scripts/bench-model.mjs` stops a run past `BENCH_MAX_RUN_COST` (default $1), and `BENCH_APPEND=1` adds to the results file instead of replacing it.
 
 ### Fixed
 
@@ -33,7 +34,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 - Discovery reads OpenCode (`~/.config/opencode/opencode.json[c]`, `opencode.json[c]`), Pi (`~/.pi/agent/mcp.json`, `.pi/mcp.json`, `~/.config/mcp/mcp.json`), and project `.codex/config.toml`. OpenCode's `mcp` map, `type: "local" | "remote"`, command arrays, and `environment` are accepted.
 - The README has a setup for Claude Code, Codex, Grok, Cursor, OpenCode, Pi, and any other MCP client.
-- A release workflow. Pushing a tag `vX.Y.Z` checks the version, the changelog, and the package contents, publishes to npm with provenance through trusted publishing, and creates the GitHub release from `CHANGELOG.md`. A prerelease tag such as `v0.3.0-rc.1` publishes under the npm tag `next` and takes its notes from `Unreleased`.
+- A release workflow. Pushing a tag `vX.Y.Z` checks the version, the changelog, and the package contents, publishes to npm with provenance through trusted publishing, and creates the GitHub release from `CHANGELOG.md`. A prerelease tag such as `v0.3.0-rc.1` publishes under the npm tag `next` and takes its notes from `Unreleased`. The workflow stages the package on npm, and it goes live when a maintainer approves it.
 - `scripts/release.mjs`, with `notes` to print a version's changelog section and `check` to verify a package before it publishes. CI runs `check` on every pull request.
 - GitHub releases for 0.1.1, 0.2.0, and 0.2.1.
 - Signatures in `describe`, `search`, and `mcptocodemode sdk` show what a method resolves to, from the tool's `outputSchema`, instead of `Promise<unknown>`. Protocol methods have their own return types. With the reference servers, 28 of 55 tools declare one.

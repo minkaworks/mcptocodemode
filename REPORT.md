@@ -171,37 +171,51 @@ The same task is in `scripts/bench-model.mjs` as `BENCH_TASKS=mail`. It has not 
 
 ## With a model
 
-`scripts/bench-model.mjs` gives the same model the same three tasks twice. Plain MCP exposes the 55 tools directly as functions, 32,885 bytes of definitions. MCPtoCodeMode exposes `search`, `describe`, and `execute` through the real MCP server, 2,943 bytes. This ran before the session, `state`, handles, and the summed trace, with a fresh isolate per `execute` and the descriptions of that build. Each answer is checked against the fixture. Tokens and cost are what OpenRouter reported. Temperature 0, three runs per cell, medians. 23 October 2026.
+`scripts/bench-model.mjs` gives the same model the same tasks twice. Plain MCP exposes every tool directly as a function: the 55 reference tools plus the 4 of the mail fixture, 34,269 bytes of definitions. MCPtoCodeMode exposes `search`, `describe`, and `execute` through the real MCP server, 3,090 bytes, with the session, `state`, handles, and the summed trace of this build. Each run starts from an empty session. Each answer is checked against its fixture. Tokens and cost are what OpenRouter reported. Temperature 0, medians. 23 October 2026.
 
 - **log**: count the `ERROR` lines in the 2,000-line log and give the last job number.
 - **orders**: count the paid orders among 25 files and total them.
 - **mixed**: the latest commit subject from git and the text of a file from filesystem.
+- **mail**: the task from the [Mail](#mail) section: count unread threads across three pages, then download the first unread attachment and pass it to `index_attachment`.
+
+Three runs per cell for the first three tasks:
 
 | Model | Task | Plain: tokens in | Code Mode: tokens in | Plain: turns | Code Mode: turns | Plain: cost | Code Mode: cost |
 | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| Claude Sonnet 5.5 | log | 101,244 | 8,093 | 2 | 3 | $0.204 | $0.019 |
-| Claude Sonnet 5.5 | orders | 46,875 | 12,918 | 3 | 4 | $0.105 | $0.033 |
-| Claude Sonnet 5.5 | mixed | 25,408 | 10,943 | 2 | 3 | $0.053 | $0.025 |
-| Claude Haiku 5.5 | log | 101,244 | 7,942 | 2 | 3 | $0.011 | $0.001 |
-| Claude Haiku 5.5 | orders | 46,875 | 31,169 | 3 | 5 | $0.005 | $0.004 |
-| Claude Haiku 5.5 | mixed | 25,408 | 11,167 | 2 | 3 | $0.003 | $0.001 |
+| Claude Sonnet 5.5 | log | 102,282 | 8,197 | 2 | 3 | $0.207 | $0.019 |
+| Claude Sonnet 5.5 | orders | 48,432 | 13,365 | 3 | 4 | $0.108 | $0.033 |
+| Claude Sonnet 5.5 | mixed | 26,446 | 11,323 | 2 | 3 | $0.055 | $0.025 |
+| Claude Haiku 5.5 | log | 102,282 | 8,383 | 2 | 3 | $0.011 | $0.001 |
+| Claude Haiku 5.5 | orders | 48,432 | 20,133 | 3 | 4 | $0.006 | $0.003 |
+| Claude Haiku 5.5 | mixed | 26,446 | 11,331 | 2 | 3 | $0.003 | $0.001 |
 
-Across all 18 runs per model:
+Across those 18 runs per model:
 
 | | Plain MCP | MCPtoCodeMode |
 | --- | ---: | ---: |
 | Correct answers, Sonnet | 9 / 9 | 9 / 9 |
 | Correct answers, Haiku | 9 / 9 | 9 / 9 |
-| Input tokens, Sonnet | 520,581 | 92,406 (5.6× fewer) |
-| Input tokens, Haiku | 520,581 | 139,453 (3.7× fewer) |
-| Cost, Sonnet | $1.086 | $0.219 (5.0× less) |
+| Input tokens, Sonnet | 531,480 | 94,002 (5.7× fewer) |
+| Input tokens, Haiku | 531,480 | 146,323 (3.6× fewer) |
+| Cost, Sonnet | $1.108 | $0.222 (5.0× less) |
 | Turns, Sonnet | 21 | 29 |
 
-Both arms answered every task correctly, so the difference is cost, not accuracy, on tasks this size. Plain MCP needed fewer turns. The models called tools in parallel: the 25 order files went out in one turn, not 25, which the byte-level fan-out above does not assume. MCPtoCodeMode usually spent one extra turn on `search`, and once or twice on fixing a program. Wall clock came out about even, within a second either way per task.
+Both arms answered every one of these tasks correctly, so here the difference is cost, not accuracy. Plain MCP needed fewer turns. The models called tools in parallel: the 25 order files went out in one turn, not 25, which the byte-level fan-out above does not assume. MCPtoCodeMode usually spent one extra turn on `search`, and sometimes one on fixing a program. Wall clock came out about even, within a second or two either way per task. These numbers are within a few percent of a run on the previous build, which had no session and a fresh isolate per `execute`, so the session did not change cost or turns on tasks that fit in one program.
 
-The log task is where output types matter. Before signatures carried `outputSchema`, `filesystem.read_text_file` read as `Promise<unknown>`. Haiku returned the whole file from `execute` to see its shape, then misread the `{ ok, result }` envelope: 5 turns and 242,886 input tokens, more than plain MCP. With `Promise<{ content: string }>` in the signature it filters in the sandbox on the first try: 3 turns and 7,942 tokens.
+One run per cell for mail, because a plain run costs up to $0.76:
 
-Raw results, with a per-turn trace of every tool call, are in `experiments/model-bench.json`. Repeat with `OPENROUTER_API_KEY=... pnpm build && pnpm bench:model`. This run cost $1.38.
+| Model | Arm | Correct | Turns | Tokens in | Tokens out | Cost | Time |
+| --- | --- | :---: | ---: | ---: | ---: | ---: | ---: |
+| Claude Sonnet 5.5 | Plain MCP | no | 6 | 307,882 | 14,002 | $0.756 | 79 s |
+| Claude Sonnet 5.5 | MCPtoCodeMode | yes | 5 | 27,536 | 600 | $0.061 | 10 s |
+| Claude Haiku 5.5 | Plain MCP | no | 7 | 521,815 | 131,631 | $0.551 | 381 s |
+| Claude Haiku 5.5 | MCPtoCodeMode | yes | 6 | 20,019 | 849 | $0.002 | 8 s |
+
+Neither model finished the mail task through plain MCP. Both paged and counted correctly, read the message, and downloaded the image, which put 200,051 bytes of base64 in the conversation. Then the image had to go back out as `index_attachment`'s argument. Haiku spent 131,631 output tokens and six minutes on it and sent `{}`, which the server rejected. Sonnet did not try: it answered with `bytes: null`. Through MCPtoCodeMode both got the right answer. `get_attachment` returned a handle, and Sonnet kept it in `state` between two runs and passed it to `index_attachment` in the second. The bytes never reached the model.
+
+The log task is where output types matter. Before signatures carried `outputSchema`, `filesystem.read_text_file` read as `Promise<unknown>`. Haiku returned the whole file from `execute` to see its shape, then misread the `{ ok, result }` envelope: 5 turns and 242,886 input tokens, more than plain MCP. With `Promise<{ content: string }>` in the signature it filters in the sandbox on the first try.
+
+Raw results, with a per-turn trace of every tool call, are in `experiments/model-bench.json`. Repeat with `OPENROUTER_API_KEY=... pnpm build && pnpm bench:model`; `BENCH_TASKS` picks tasks, `BENCH_RUNS` sets the runs, and `BENCH_MAX_RUN_COST` (default $1) stops a run that spends more. This run cost $2.77.
 
 ## What this does not say
 
