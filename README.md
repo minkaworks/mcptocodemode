@@ -137,10 +137,24 @@ It accepts standard `mcpServers` JSON, VS Code `servers` JSON, OpenCode `mcp` JS
 | `--lazy` | Don't launch a cached server until code calls it. |
 | `--read-only` | Refuse methods their server does not mark read-only. Same as `CODEMODE_READ_ONLY=1`. |
 | `--allow server.method` | With `--read-only`, permit one method, or a whole server with `server.*`. Repeatable. |
+| `--registry` | `search` lists installable servers from the MCP registry and `codemode.install` installs one after you confirm. Same as `CODEMODE_REGISTRY=1`. |
 | `--no-cache` | Don't read or write the tool cache. Same as `CODEMODE_CACHE=0`. |
 | `CODEMODE_CACHE_DIR` | Where tool lists are cached. Default `~/.cache/mcptocodemode`. |
 
 Servers connect in parallel. One that fails, or doesn't answer within 60 seconds, is skipped and the rest load. Tool lists are cached after each connect, so the next start answers at once and the servers connect in the background. A cache entry is keyed by a hash of the server config, and credentials are never written. `mcptocodemode list` refreshes the cache. `mcptocodemode sdk --out api.d.ts` writes the TypeScript the sandbox implements.
+
+## Find and install servers
+
+```bash
+npx -y mcptocodemode find postgres
+npx -y mcptocodemode add io.github.github/github-mcp-server
+```
+
+`find` searches the [official MCP registry](https://registry.modelcontextprotocol.io), about 48,000 servers. The first run indexes it into the cache directory, which takes a few minutes. After that a search answers in a second or two, and each run fetches only what changed. Results put the vendor's own server first: `io.github.github` for GitHub, `com.stripe` for Stripe, since the registry verifies those namespaces against the GitHub account or the domain. `add` shows the publisher, the exact command, and the variables it reads, asks you, and saves the server to `~/.config/mcptocodemode/servers.json`, which discovery reads. Variables are saved as `${NAME}`, never their values.
+
+Start `serve` with `--registry` and the model can do the same in the conversation. `search` then also lists `available` servers, and the program can call `await codemode.install("io.github.acme/notes")`. Your agent shows you what would run and asks you to confirm; nothing runs until you say yes. The server connects without a restart and the program can use it on the next line. Searching sends the query to the registry only while the local index is being built, which is why `--registry` is off by default.
+
+Remote servers that need an OAuth sign-in are listed but do not connect yet.
 
 ## Library
 

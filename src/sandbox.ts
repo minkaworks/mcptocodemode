@@ -1,6 +1,5 @@
 import {
   getQuickJS,
-  shouldInterruptAfterDeadline,
   type QuickJSContext,
   type QuickJSDeferredPromise,
   type QuickJSHandle,
@@ -35,7 +34,10 @@ type Run = {
   logs: string[];
   calls: CallTrace[];
   callCount: number;
+  /** Moves later while the run waits on a person (see `whilePaused`). */
   deadline: number;
+  /** Host waits that do not count against the deadline, such as an install confirmation. */
+  paused: number;
   alive: boolean;
   /**
    * Host promises the guest has not seen settle. A run can end while a call is
@@ -47,6 +49,10 @@ type Run = {
 
 export type SessionOptions = {
   limits: Limits;
+  /** Registry matches for a query, added to `codemode.search` results as `available`. */
+  discover?: (query: string) => Promise<Record<string, unknown> | undefined>;
+  /** Installs a registry server after a person confirms. Backs `codemode.install`. */
+  install?: (name: string) => Promise<unknown>;
   /** Called whenever the isolate is thrown away: reset, a poisoned run, or close. */
   onClear?: () => void;
 };
@@ -82,6 +88,7 @@ export class SandboxSession {
       calls: [],
       callCount: 0,
       deadline: Date.now() + options.timeoutMs,
+      paused: 0,
       alive: true,
       pending: new Set(),
     };
@@ -91,8 +98,8 @@ export class SandboxSession {
       const vm = await this.context();
       this.ensureBindings(vm);
       this.run = run;
-      vm.runtime.setInterruptHandler(shouldInterruptAfterDeadline(run.deadline));
-      const outcome = await this.evaluate(vm, code, run, options.timeoutMs);
+      vm.runtime.setInterruptHandler(() => Date.now() > run.deadline);
+      const outcome = await this.evaluate(vm, code, run);
       poisoned = outcome.poisoned;
       if (!outcome.ok) {
         const error = poisoned ? `${outcome.error}. ${CLEARED}` : outcome.error;
@@ -154,7 +161,6 @@ export class SandboxSession {
     vm: QuickJSContext,
     code: string,
     run: Run,
-    timeoutMs: number,
   ): Promise<{ ok: true; result: unknown; poisoned: false } | { ok: false; error: string; poisoned: boolean }> {
     let evaluated = vm.evalCode(wrapCode(code));
     if (evaluated.error && looksLikeExpression(code.trim()) && isSyntaxError(vm, evaluated.error)) {
@@ -170,8 +176,14 @@ export class SandboxSession {
 
     const promiseHandle = evaluated.value;
     let timer: ReturnType<typeof setTimeout> | undefined;
+    // Rechecks the deadline when it fires, since a pause can have moved it.
     const wallClock = new Promise<never>((_, reject) => {
-      timer = setTimeout(() => reject(new Error("Execution timed out")), timeoutMs + 500);
+      const check = () => {
+        const left = run.deadline + 500 - Date.now();
+        if (run.paused > 0 || left > 0) timer = setTimeout(check, Math.max(left, 100));
+        else reject(new Error("Execution timed out"));
+      };
+      timer = setTimeout(check, Math.max(run.deadline + 500 - Date.now(), 0));
     });
     try {
       // Register the host waiter before running jobs. A promise that settles
@@ -244,8 +256,19 @@ export class SandboxSession {
       const options = isRecord(args[1]) ? args[1] : {};
       const server = typeof options.server === "string" ? options.server : undefined;
       const limit = typeof options.limit === "number" ? options.limit : undefined;
-      return searchCatalog(this.catalog, query, { server, limit });
+      const local = searchCatalog(this.catalog, query, { server, limit });
+      return { ...local, ...(await this.options.discover?.(query)) };
     });
+    const install = this.hostFunction(vm, "install", async (args, run) => {
+      if (!this.options.install) throw new Error("Installing servers is off. Start mcptocodemode with --registry to turn it on.");
+      const name = typeof args[0] === "string" ? args[0] : "";
+      const result = await whilePaused(run, this.options.install(name));
+      // Bind it now, so the rest of this program can call it.
+      if (this.vm === vm) this.ensureBindings(vm);
+      return result;
+    });
+    vm.setProp(codemode, "install", install);
+    install.dispose();
     const describe = this.hostFunction(vm, "describe", async (args) =>
       describeTarget(this.catalog, typeof args[0] === "string" ? args[0] : ""),
     );
@@ -390,6 +413,18 @@ export async function runInSandbox(
     return await session.execute(code, { timeoutMs: options.timeoutMs });
   } finally {
     session.close();
+  }
+}
+
+/** Wait without spending the run's time budget, for steps that wait on a person. */
+async function whilePaused<T>(run: Run, work: Promise<T>): Promise<T> {
+  run.paused += 1;
+  const started = Date.now();
+  try {
+    return await work;
+  } finally {
+    run.paused -= 1;
+    run.deadline += Date.now() - started;
   }
 }
 

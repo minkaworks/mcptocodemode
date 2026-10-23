@@ -3,12 +3,16 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { writeFile } from "node:fs/promises";
+import path from "node:path";
+import { createInterface } from "node:readline/promises";
 import { defaultCacheDir, fileCache } from "./cache.js";
-import { CodeMode } from "./codemode.js";
+import { CodeMode, type CodeModeOptions } from "./codemode.js";
+import { configEntry, describeInstall, installServer, localNameOf, saveServer, userConfigPath } from "./install.js";
+import { availableServer, RegistryClient } from "./registry.js";
 import { loadConfigs } from "./config.js";
 import { readOnlyPolicy } from "./policy.js";
 import { discoverConfig } from "./discover.js";
-import { createCodeModeServer } from "./server.js";
+import { confirmInstall, createCodeModeServer } from "./server.js";
 import type { Limits } from "./types.js";
 import { nestingDepth, SELF_NAME, UpstreamPool } from "./upstream.js";
 import { VERSION } from "./version.js";
@@ -21,12 +25,18 @@ if (command === "demo-upstream") {
   await serve();
 } else if (command === "sdk" || command === "list") {
   await inspect(command);
+} else if (command === "find") {
+  await find(process.argv.slice(3).filter((arg) => !arg.startsWith("--")).join(" "));
+} else if (command === "add") {
+  await add(process.argv[3]);
 } else {
   process.stderr.write(
     [
-      "mcptocodemode serve [--config file ...] [--no-cache] [--lazy] [--read-only [--allow server.method ...]]",
+      "mcptocodemode serve [--config file ...] [--no-cache] [--lazy] [--read-only [--allow server.method ...]] [--registry]",
       "mcptocodemode sdk [--config file ...] [--out api.d.ts]",
       "mcptocodemode list [--config file ...]",
+      "mcptocodemode find <words>",
+      "mcptocodemode add <registry name> [--yes]",
       "mcptocodemode demo-upstream",
       "",
       "A config file is this project's JSON, standard mcpServers JSON, or [mcp_servers.*] TOML.",
@@ -36,10 +46,17 @@ if (command === "demo-upstream") {
       "--lazy leaves a cached server unlaunched until code calls it.",
       "--read-only refuses methods their server does not mark read-only. --allow makes an exception.",
       "list connects to every server and refreshes the cache.",
+      "--registry lets search list servers from the MCP registry and the code install one after you confirm.",
+      "find searches the MCP registry. add saves one of its servers to your config, after you confirm.",
       "",
     ].join("\n"),
   );
   process.exit(command ? 1 : 0);
+}
+
+/** `--registry` or `CODEMODE_REGISTRY=1`. Off by default: searching sends the query to the registry. */
+function registryOn(): boolean {
+  return process.argv.includes("--registry") || process.env.CODEMODE_REGISTRY === "1";
 }
 
 /** `--read-only` or `CODEMODE_READ_ONLY=1`. `--allow` alone implies nothing. */
@@ -66,7 +83,10 @@ function flags(name: string): string[] {
  * `serve` and `sdk` read the tool cache, so cached servers are not launched
  * up front. `list` connects to every server and rewrites the cache.
  */
-async function openPool(kind: "serve" | "sdk" | "list"): Promise<{ pool: UpstreamPool; mode: CodeMode }> {
+async function openPool(
+  kind: "serve" | "sdk" | "list",
+  extra: (pool: UpstreamPool) => Partial<CodeModeOptions> = () => ({}),
+): Promise<{ pool: UpstreamPool; mode: CodeMode }> {
   const configPaths = flags("--config");
   const fromEnv = process.env.CODEMODE_CONFIG;
   if (configPaths.length === 0 && fromEnv) configPaths.push(fromEnv);
@@ -114,6 +134,7 @@ async function openPool(kind: "serve" | "sdk" | "list"): Promise<{ pool: Upstrea
   const mode: CodeMode = new CodeMode(pool.catalog, (call) => pool.call(call, limits.maxResultChars, mode.blobs), {
     limits,
     beforeCall: readOnly() ? readOnlyPolicy(pool.catalog, { allow: flags("--allow") }) : undefined,
+    ...extra(pool),
   });
   return { pool, mode };
 }
@@ -126,8 +147,35 @@ async function serve(): Promise<void> {
     await new McpServer({ name: SELF_NAME, version: VERSION }).connect(new StdioServerTransport());
     return;
   }
-  const { pool, mode } = await openPool("serve");
-  const server = createCodeModeServer(mode, { ready: pool.ready, readOnly: readOnly() });
+  // Created after the CodeMode, which needs it to ask the person at the client.
+  let server: ReturnType<typeof createCodeModeServer> | undefined;
+  const registry = registryOn() ? registryClient() : undefined;
+  if (registry) {
+    // The first sync downloads the whole registry. Search says so until it is done.
+    void registry.sync().catch((error: unknown) => {
+      process.stderr.write(`mcptocodemode: registry sync failed: ${error instanceof Error ? error.message : String(error)}\n`);
+    });
+  }
+  const saveTo = userConfigPath();
+  const { pool, mode } = await openPool("serve", (pool) =>
+    registry
+      ? {
+          discover: async (query) => (await registry.search(query)).map((item) => availableServer(item)),
+          install: (name) =>
+            installServer(name, {
+              lookup: (lookupName) => registry.get(lookupName),
+              connect: (spec) => pool.add(spec),
+              confirm: (request) => {
+                if (!server) throw new Error("The MCP connection is not ready yet");
+                return confirmInstall(server, request);
+              },
+              persist: (localName, entry) => saveServer(saveTo, localName, entry),
+              savedTo: saveTo,
+            }),
+        }
+      : {},
+  );
+  server = createCodeModeServer(mode, { ready: pool.ready, readOnly: readOnly(), registry: registry !== undefined });
   const transport = new StdioServerTransport();
   const shutdown = async () => {
     mode.close();
@@ -141,6 +189,55 @@ async function serve(): Promise<void> {
     void shutdown();
   });
   await server.connect(transport);
+}
+
+/** A registry client with its local index in the cache directory. */
+function registryClient(): RegistryClient {
+  return new RegistryClient({ indexFile: path.join(defaultCacheDir(), "registry-index.json") });
+}
+
+async function find(query: string): Promise<void> {
+  if (!query) throw new Error("usage: mcptocodemode find <words>");
+  const registry = registryClient();
+  if (!(await registry.hasIndex())) process.stderr.write("mcptocodemode: indexing the MCP registry the first time. This takes a few minutes.\n");
+  const result = await registry.sync((count) => {
+    if (count > 0 && count % 5000 === 0) process.stderr.write(`mcptocodemode: ${count} servers so far\n`);
+  });
+  if (result.full) process.stderr.write(`mcptocodemode: indexed ${result.servers} servers\n`);
+  const results = await registry.search(query, 10);
+  if (results.length === 0) process.stdout.write(`No registry servers match "${query}".\n`);
+  for (const item of results.map((server) => availableServer(server))) {
+    process.stdout.write(`${item.name} ${item.version}${item.publisher === "owner" ? "  (publisher owns the repository)" : ""}\n`);
+    if (item.description) process.stdout.write(`  ${item.description}\n`);
+    process.stdout.write(`  ${item.runs}\n`);
+    if (item.needs.length > 0) process.stdout.write(`  needs ${item.needs.join(", ")}${item.ready ? "" : " (not set)"}\n`);
+  }
+}
+
+/** Save a registry server to the user config after a person confirms in the terminal. Nothing runs yet. */
+async function add(name: string | undefined): Promise<void> {
+  if (!name || name.startsWith("--")) throw new Error("usage: mcptocodemode add <registry name> [--yes]");
+  const server = await registryClient().get(name);
+  if (!server) throw new Error(`No server named "${name}" in the registry. Try: mcptocodemode find <words>`);
+  const option = server.install.find((item) => item.needs.every((need) => process.env[need.name] !== undefined)) ?? server.install[0];
+  if (!option) throw new Error(`${name} has no package or remote mcptocodemode can run.`);
+  const file = userConfigPath();
+  process.stdout.write(`${describeInstall(server, option, file)}\n`);
+  if (!process.argv.includes("--yes")) {
+    const prompt = createInterface({ input: process.stdin, output: process.stdout });
+    const answer = await prompt.question("Save it? [y/N] ");
+    prompt.close();
+    if (!/^y(es)?$/i.test(answer.trim())) {
+      process.stdout.write("Nothing saved.\n");
+      return;
+    }
+  }
+  await saveServer(file, localNameOf(server.name), configEntry(server, option));
+  process.stdout.write(`Saved as "${localNameOf(server.name)}" in ${file}. Restart your agent to load it.\n`);
+  const missing = option.needs.filter((need) => process.env[need.name] === undefined).map((need) => need.name);
+  if (missing.length > 0) {
+    process.stdout.write(`Set ${missing.join(", ")} in the environment your agent starts mcptocodemode with. The config reads ${missing.map((item) => `\${${item}}`).join(", ")}.\n`);
+  }
 }
 
 async function inspect(kind: "sdk" | "list"): Promise<void> {

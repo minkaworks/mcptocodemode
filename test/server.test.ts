@@ -87,3 +87,47 @@ function text(result: { content?: Array<{ type: string; text?: string }> }): str
   const block = result.content?.find((item) => item.type === "text");
   return block?.text ?? "";
 }
+
+describe("registry through MCP", () => {
+  it("lists available servers in search and confirms an install through elicitation", async () => {
+    const { ElicitRequestSchema } = await import("@modelcontextprotocol/sdk/types.js");
+    const { confirmInstall } = await import("../src/server.js");
+    const catalog = catalogFromServers([]);
+    const mode = new CodeMode(catalog, async () => null, {
+      discover: async (query) => [{ name: `io.github.acme/${query}`, ready: true }],
+    });
+    const mcp = createCodeModeServer(mode, { registry: true });
+    const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+    const client = new Client({ name: "asks", version: "0" }, { capabilities: { elicitation: {} } });
+    const prompts: string[] = [];
+    let answer = true;
+    client.setRequestHandler(ElicitRequestSchema, async (request) => {
+      prompts.push(String(request.params.message));
+      return { action: "accept", content: { install: answer } };
+    });
+    await Promise.all([client.connect(clientTransport), mcp.connect(serverTransport)]);
+
+    const found = JSON.parse(text(await client.callTool({ name: "search", arguments: { query: "notes" } }))) as { available: unknown[] };
+    expect(found.available).toEqual([{ name: "io.github.acme/notes", ready: true }]);
+    const execute = (await client.listTools()).tools.find((tool) => tool.name === "execute");
+    expect(execute?.description).toContain("codemode.install");
+
+    const request = { server: { name: "io.github.acme/notes" }, message: "Install io.github.acme/notes?" } as never;
+    expect(await confirmInstall(mcp, request)).toBe(true);
+    answer = false;
+    expect(await confirmInstall(mcp, request)).toBe(false);
+    expect(prompts).toEqual(["Install io.github.acme/notes?", "Install io.github.acme/notes?"]);
+    await client.close();
+    await mcp.close();
+
+    // A client that cannot ask gets the terminal command instead.
+    const silent = createCodeModeServer(mode, { registry: true });
+    const [a, b] = InMemoryTransport.createLinkedPair();
+    const plain = new Client({ name: "silent", version: "0" });
+    await Promise.all([plain.connect(a), silent.connect(b)]);
+    await expect(confirmInstall(silent, request)).rejects.toThrow("npx mcptocodemode add io.github.acme/notes");
+    await plain.close();
+    await silent.close();
+  });
+});
+

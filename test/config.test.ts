@@ -167,4 +167,17 @@ describe("discovery", () => {
     const found = await discoverConfig({ cwd, home, platform: "linux", env: {} });
     expect(found.servers.map((server) => server.name)).toEqual(["oc", "pi", "codex"]);
   });
+
+  it("reads the servers mcptocodemode add saved", async () => {
+    const home = await mkdtemp(path.join(tmpdir(), "codemode-home-"));
+    const cwd = await mkdtemp(path.join(tmpdir(), "codemode-cwd-"));
+    await mkdir(path.join(home, ".config", "mcptocodemode"), { recursive: true });
+    await writeFile(
+      path.join(home, ".config", "mcptocodemode", "servers.json"),
+      JSON.stringify({ mcpServers: { tiny: { command: "npx", args: ["-y", "@acme/tiny@1.2.3"], registry: "io.github.acme/tiny@1.2.3" } } }),
+    );
+    const found = await discoverConfig({ cwd, home, platform: "linux", env: {} });
+    expect(found.servers.map((server) => server.name)).toEqual(["tiny"]);
+  });
 });
+

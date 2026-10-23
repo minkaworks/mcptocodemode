@@ -8,7 +8,7 @@ import type { CatalogCache } from "./cache.js";
 import { findServer, namespaceWithIdent } from "./catalog.js";
 import { uniqueIdent } from "./ident.js";
 import type { ServerSpec } from "./config.js";
-import type { Catalog, JsonSchema, ListedTool, ToolCall } from "./types.js";
+import type { Catalog, JsonSchema, ListedTool, ServerNamespace, ToolCall } from "./types.js";
 import { VERSION } from "./version.js";
 
 type ContentBlock = {
@@ -97,16 +97,17 @@ export class UpstreamPool {
   private readonly cache?: CatalogCache;
   private readonly onFailure?: (failure: ConnectFailure) => void;
   private closed = false;
+  /** Idents taken so far, including servers added after start. */
+  private readonly usedIdents = new Set<string>();
 
   private constructor(specs: ServerSpec[], options: PoolOptions) {
     this.timeoutMs = options.timeoutMs ?? DEFAULT_CONNECT_TIMEOUT_MS;
     this.depth = nestingDepth(options.env ?? process.env) + 1;
     this.cache = options.cache;
     this.onFailure = options.onFailure;
-    const used = new Set<string>();
     // A spec already known to be this server is not launched again.
     const kept = specs.filter((spec) => !this.cache?.isSelf(spec));
-    this.entries = kept.map((spec, index) => ({ spec, ident: uniqueIdent(spec.name, used), index }));
+    this.entries = kept.map((spec, index) => ({ spec, ident: uniqueIdent(spec.name, this.usedIdents), index }));
     this.catalog = { servers: this.entries.map((entry) => ({ name: entry.spec.name, ident: entry.ident, tools: [] })) };
 
     const now: Array<Promise<unknown>> = [];
@@ -139,6 +140,30 @@ export class UpstreamPool {
     const pool = new UpstreamPool(specs, { ...options, lazy: false });
     await pool.ready;
     return pool;
+  }
+
+  /**
+   * Connect one more server while running. It joins the catalog once it
+   * connects, and the sandbox binds it on its next run. A name already in the
+   * pool is refused.
+   */
+  async add(spec: ServerSpec): Promise<ServerNamespace> {
+    if (this.entries.some((entry) => entry.spec.name === spec.name)) {
+      throw new Error(`A server named "${spec.name}" is already configured`);
+    }
+    const entry: Entry = { spec, ident: uniqueIdent(spec.name, this.usedIdents), index: this.entries.length };
+    this.entries.push(entry);
+    this.catalog.servers.push({ name: spec.name, ident: entry.ident, tools: [] });
+    try {
+      await this.open(entry);
+    } catch (error) {
+      // A server that never connected is not kept around as a failed namespace.
+      this.drop(entry);
+      throw new Error(`${spec.name} did not connect: ${publicError(error)}`);
+    }
+    const namespace = this.catalog.servers[entry.index];
+    if (!namespace) throw new Error(`${spec.name} left the pool while connecting`);
+    return namespace;
   }
 
   /** Servers that failed to connect so far, in config order. */

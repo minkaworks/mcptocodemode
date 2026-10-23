@@ -56,6 +56,8 @@ Hits do not include JSON Schemas. The first three hits of a non-empty query carr
 
 `toolCount` counts upstream tools. It does not count the protocol methods below. An empty query still returns `servers`, plus a sample of tools. The sample omits protocol methods. A query that names resources or prompts can return those methods.
 
+A host with a registry configured adds `available` to a non-empty query's result: up to five servers it could install, from the official MCP registry or another one. Each has `name`, `description`, `version`, `publisher` (`owner` when the publisher also owns the repository, `namespace` otherwise), `repository`, `runs` (the exact command or URL), `kind`, `needs` (variables it requires), and `ready` (whether they are set). When the registry fails, `available` is empty and `registryError` says why. Without a registry neither field appears.
+
 ### describe
 
 ```json
@@ -207,6 +209,19 @@ Every connected server exposes the same MCP features, not only tools:
 `arguments` values are strings, matching the MCP prompt schema. The host does not call these during connect. A server that does not implement one returns its own error when the code calls it.
 
 Resource text is returned. Resource blobs, images, and audio are not copied into the sandbox. The code receives a handle, or an object with `omitted: true` when there is no room. See [Handles](#handles).
+
+### Installing
+
+With a registry configured, `codemode.install(name)` installs one server by its registry name. The host asks a person first, showing the publisher, the exact command or URL, and the variables it reads. In this implementation that is MCP elicitation, and a client that cannot elicit gets an error that names the terminal command instead. Nothing runs before a person accepts. While the host waits for the answer, the run's deadline does not advance.
+
+When the person accepts, the server connects at once and is bound before the program continues, so the next line can call it:
+
+```js
+await codemode.install("io.github.acme/notes");
+return await notes.list();
+```
+
+The host saves the server so the next session has it. A saved entry refers to variables as `${NAME}` and never contains their values. A server needs its variables set in the host's environment. A remote server that requires an OAuth sign-in does not connect in this implementation.
 
 ## Host
 

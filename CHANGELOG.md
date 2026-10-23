@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Added
+
+- `mcptocodemode find <words>` searches the official MCP registry from a local index in the cache directory. The first run indexes it, about 48,000 servers in a few minutes; later runs fetch only what changed. A vendor's own server ranks first, by its verified namespace.
+- `mcptocodemode add <name>` shows the publisher, the exact command, and the variables a registry server reads, asks for confirmation, and saves it to `~/.config/mcptocodemode/servers.json`. Discovery reads that file. Saved entries hold `${NAME}`, never values.
+- `serve --registry` (or `CODEMODE_REGISTRY=1`): `search` adds `available` servers from the registry, and `codemode.install(name)` installs one after the person at the client confirms through MCP elicitation. It connects at once and is bound for the rest of the program. The run's clock stops while waiting for the answer. A client that cannot ask gets the `add` command instead.
+- `UpstreamPool.add` connects a server while running. `RegistryClient`, `installServer`, and `confirmInstall` for library users.
+
 ### Fixed
 
 - `mcptocodemode/package.json` can be imported or required, for tools that read the installed version.

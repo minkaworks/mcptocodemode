@@ -7,6 +7,10 @@ import { defaultLimits, type Catalog, type Dispatcher, type ExecuteResult, type 
 export type CodeModeOptions = {
   limits?: Partial<Limits>;
   beforeCall?: (call: ToolCall) => void | Promise<void>;
+  /** Registry servers matching a query, listed by search as `available`. */
+  discover?: (query: string) => Promise<unknown[]>;
+  /** Install one registry server by name, after a person confirms. Backs `codemode.install`. */
+  install?: (name: string) => Promise<unknown>;
 };
 
 /**
@@ -19,6 +23,7 @@ export class CodeMode {
   /** Pass this to `UpstreamPool.call` so binary results come back as handles. */
   readonly blobs = new BlobStore();
   private readonly session: SandboxSession;
+  private readonly discoverer?: (query: string) => Promise<unknown[]>;
 
   constructor(catalog: Catalog, dispatcher: Dispatcher, options: CodeModeOptions = {}) {
     this.catalog = catalog;
@@ -28,7 +33,26 @@ export class CodeMode {
       await options.beforeCall?.(call);
       return dispatcher({ ...call, input: this.blobs.expand(call.input) as Record<string, unknown> });
     };
-    this.session = new SandboxSession(catalog, dispatch, { limits: this.limits, onClear: () => this.blobs.clear() });
+    this.discoverer = options.discover;
+    this.session = new SandboxSession(catalog, dispatch, {
+      limits: this.limits,
+      onClear: () => this.blobs.clear(),
+      discover: (query) => this.discover(query),
+      install: options.install,
+    });
+  }
+
+  /**
+   * `{ available }` for a non-empty query when a registry is configured, and
+   * `{ available: [], registryError }` when it fails. Undefined otherwise.
+   */
+  async discover(query: string): Promise<Record<string, unknown> | undefined> {
+    if (!this.discoverer || !query.trim()) return undefined;
+    try {
+      return { available: await this.discoverer(query) };
+    } catch (error) {
+      return { available: [], registryError: error instanceof Error ? error.message : String(error) };
+    }
   }
 
   search(query: string, options: { server?: string; limit?: number } = {}) {

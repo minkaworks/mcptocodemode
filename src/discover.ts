@@ -30,7 +30,7 @@ export async function discoverConfig(options: DiscoverOptions = {}): Promise<Dis
   const home = options.home ?? os.homedir();
   const platform = options.platform ?? process.platform;
   const env = options.env ?? process.env;
-  const candidates = await discoveryPaths(cwd, home, platform);
+  const candidates = await discoveryPaths(cwd, home, platform, env);
   const claudeJson = path.join(home, ".claude.json");
   const projectKeys = [...new Set([await findProjectRoot(cwd), path.resolve(cwd)])];
 
@@ -105,7 +105,12 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-export async function discoveryPaths(cwd: string, home: string, platform: NodeJS.Platform): Promise<string[]> {
+export async function discoveryPaths(
+  cwd: string,
+  home: string,
+  platform: NodeJS.Platform,
+  env: NodeJS.ProcessEnv = process.env,
+): Promise<string[]> {
   const homeFiles = [
     path.join(home, ".codex", "config.toml"),
     claudeDesktopConfig(home, platform),
@@ -116,6 +121,8 @@ export async function discoveryPaths(cwd: string, home: string, platform: NodeJS
     path.join(home, ".config", "opencode", "opencode.jsonc"),
     path.join(home, ".config", "mcp", "mcp.json"),
     path.join(home, ".pi", "agent", "mcp.json"),
+    // Where `mcptocodemode add` and codemode.install save servers.
+    path.join(env.XDG_CONFIG_HOME || path.join(home, ".config"), "mcptocodemode", "servers.json"),
   ];
   const root = await findProjectRoot(cwd);
   const project: string[] = [];

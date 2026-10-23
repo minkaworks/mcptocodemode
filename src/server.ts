@@ -1,6 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import type { CodeMode } from "./codemode.js";
+import type { InstallRequest } from "./install.js";
 import { SELF_NAME } from "./upstream.js";
 import { VERSION } from "./version.js";
 
@@ -39,7 +40,36 @@ export type CodeModeServerOptions = {
    * execute is then announced as read-only too, so clients can approve it.
    */
   readOnly?: boolean;
+  /** The registry is on: search lists installable servers and codemode.install exists. */
+  registry?: boolean;
 };
+
+/** How long a person has to answer an install confirmation. */
+const CONFIRM_TIMEOUT_MS = 5 * 60_000;
+
+/**
+ * Ask the person at the client to approve an install, through MCP elicitation.
+ * Throws with the terminal command when the client cannot ask.
+ */
+export async function confirmInstall(server: McpServer, request: InstallRequest): Promise<boolean> {
+  if (!server.server.getClientCapabilities()?.elicitation) {
+    throw new Error(
+      `Installing ${request.server.name} needs your confirmation, and this client cannot ask for it. Run this in a terminal, then restart the agent: npx mcptocodemode add ${request.server.name}`,
+    );
+  }
+  const answer = await server.server.elicitInput(
+    {
+      message: request.message,
+      requestedSchema: {
+        type: "object",
+        properties: { install: { type: "boolean", title: "Install", description: "Run this server now and save it." } },
+        required: ["install"],
+      },
+    },
+    { timeout: CONFIRM_TIMEOUT_MS },
+  );
+  return answer.action === "accept" && answer.content?.install === true;
+}
 
 /** search and describe only read the catalog. Clients use this to approve them without asking. */
 const READ_ONLY = { readOnlyHint: true, idempotentHint: true, openWorldHint: false } as const;
@@ -69,7 +99,8 @@ export function createCodeModeServer(mode: CodeMode, options: CodeModeServerOpti
     async ({ query, server: serverName, limit }) => {
       await ready;
       try {
-        return jsonResult(mode.search(query, { server: serverName, limit }));
+        const local = mode.search(query, { server: serverName, limit });
+        return jsonResult({ ...local, ...(await mode.discover(query)) });
       } catch (error) {
         return errorResult(error);
       }
@@ -113,6 +144,9 @@ export function createCodeModeServer(mode: CodeMode, options: CodeModeServerOpti
         "Images and binary results arrive as { $handle, type, mimeType }. Pass that object to another tool and it receives the bytes.",
         "reset: true starts an empty session. console.log output is returned.",
         ...(options.readOnly ? ["This session is read-only: methods their server does not mark read-only are refused."] : []),
+        ...(options.registry
+          ? ["search also lists `available` servers from the MCP registry; `await codemode.install(name)` asks the user, connects it, and binds it for the rest of the program."]
+          : []),
       ].join(" "),
       inputSchema: executeInput,
       annotations: options.readOnly ? RUNS_READ_ONLY_TOOLS : RUNS_UPSTREAM_TOOLS,

@@ -24,8 +24,30 @@ export { describeTarget, renderSdk } from "./describe.js";
 export { OVERLAP_ERROR, SandboxSession, wrapCode, runInSandbox, type SessionOptions } from "./sandbox.js";
 export { schemaToType } from "./schema.js";
 export { searchCatalog } from "./search.js";
-export { createCodeModeServer, type CodeModeServerOptions } from "./server.js";
+export { confirmInstall, createCodeModeServer, type CodeModeServerOptions } from "./server.js";
 export { readOnlyPolicy, type ReadOnlyOptions } from "./policy.js";
+export {
+  availableServer,
+  DEFAULT_REGISTRY_URL,
+  RegistryClient,
+  RegistryError,
+  type AvailableServer,
+  type InstallOption,
+  type Publisher,
+  type RegistryOptions,
+  type RegistryServer,
+} from "./registry.js";
+export {
+  configEntry,
+  describeInstall,
+  installServer,
+  localNameOf,
+  saveServer,
+  userConfigPath,
+  type InstallContext,
+  type InstallRequest,
+  type InstallResult,
+} from "./install.js";
 export { defaultCacheDir, fileCache, specKey, type CatalogCache } from "./cache.js";
 export { toIdent, uniqueIdent } from "./ident.js";
 export {
