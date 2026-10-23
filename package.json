@@ -23,7 +23,8 @@
   },
   "type": "module",
   "bin": {
-    "mcptocodemode": "dist/cli.js"
+    "mcptocodemode": "dist/cli.js",
+    "cm": "dist/cli.js"
   },
   "exports": {
     ".": "./dist/index.js",

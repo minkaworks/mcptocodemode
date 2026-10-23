@@ -56,6 +56,16 @@ Without a model in the loop:
 
 ## Use it
 
+`npx -y mcptocodemode` runs it without installing. To keep it around, install it globally and you also get the short `cm` command:
+
+```bash
+npm install -g mcptocodemode
+cm find postgres
+cm login notion
+```
+
+`cm` is only the installed alias. `npx cm` would fetch an unrelated npm package, so with `npx` keep the full name.
+
 Add one server to your coding agent. It finds the servers you already configured for any of these agents, so you don't move them.
 
 **Claude Code**

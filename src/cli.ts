@@ -33,16 +33,18 @@ if (command === "demo-upstream") {
 } else if (command === "login" || command === "logout") {
   await signIn(command, process.argv[3]);
 } else {
+  // Usage uses the name it was started as: mcptocodemode, or the cm alias.
+  const self = path.basename(process.argv[1] ?? "mcptocodemode").replace(/\.js$/, "") === "cm" ? "cm" : "mcptocodemode";
   process.stderr.write(
     [
-      "mcptocodemode serve [--config file ...] [--no-cache] [--lazy] [--read-only [--allow server.method ...]] [--registry]",
-      "mcptocodemode sdk [--config file ...] [--out api.d.ts]",
-      "mcptocodemode list [--config file ...]",
-      "mcptocodemode find <words>",
-      "mcptocodemode add <registry name> [--yes]",
-      "mcptocodemode login <server> [--port 33418]",
-      "mcptocodemode logout <server>",
-      "mcptocodemode demo-upstream",
+      `${self} serve [--config file ...] [--no-cache] [--lazy] [--read-only [--allow server.method ...]] [--registry]`,
+      `${self} sdk [--config file ...] [--out api.d.ts]`,
+      `${self} list [--config file ...]`,
+      `${self} find <words>`,
+      `${self} add <registry name> [--yes]`,
+      `${self} login <server> [--port 33418]`,
+      `${self} logout <server>`,
+      `${self} demo-upstream`,
       "",
       "A config file is this project's JSON, standard mcpServers JSON, or [mcp_servers.*] TOML.",
       "With no --config, serve reads the MCP configs already on this machine.",
