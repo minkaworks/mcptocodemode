@@ -1,6 +1,7 @@
 import { realpath } from "node:fs/promises";
 import * as prompt from "@clack/prompts";
 import { AGENT_SERVER_NAME, detectAgents, onPath, type AgentEnvironment, type AgentTarget } from "./agents.js";
+import { chooseMany, chooseOne, ui } from "./ui.js";
 
 export type SetupOptions = AgentEnvironment & {
   /** Agent ids to use instead of asking. */
@@ -19,13 +20,7 @@ export type SetupOptions = AgentEnvironment & {
   script?: string;
 };
 
-const color = (code: number) => (text: string) =>
-  process.stdout.isTTY && !process.env.NO_COLOR ? `\u001b[${code}m${text}\u001b[0m` : text;
-const bold = color(1);
-const dim = color(2);
-const green = color(32);
-const cyan = color(36);
-const inverse = color(7);
+const { bold, dim, green, cyan, inverse } = ui;
 
 /**
  * Add MCPtoCodeMode to the coding agents on this machine, or take it out
@@ -139,17 +134,16 @@ async function chooseAgents(found: AgentTarget[], options: SetupOptions, ask: bo
     return found.filter((agent) => options.agents?.includes(agent.id));
   }
   if (!ask) return found;
-  const picked = await prompt.multiselect({
-    message: options.remove ? "Remove it from which agents?" : "Where should MCPtoCodeMode be added?",
-    options: found.map((agent) => ({
+  const picked = await chooseMany(
+    options.remove ? "Remove it from which agents?" : "Where should MCPtoCodeMode be added?",
+    found.map((agent) => ({
       value: agent.id,
       label: agent.name,
-      hint: !options.remove && agent.added ? `already added, will update · ${agent.where}` : agent.where,
+      hint: !options.remove && agent.added ? `${agent.where} · already added, will update` : agent.where,
     })),
-    initialValues: found.map((agent) => agent.id),
-    required: true,
-  });
-  if (prompt.isCancel(picked)) return undefined;
+    { initial: found.map((agent) => agent.id), required: "Pick at least one agent, or press Ctrl+C to quit." },
+  );
+  if (!picked) return undefined;
   return found.filter((agent) => picked.includes(agent.id));
 }
 
@@ -157,15 +151,11 @@ async function chooseFeatures(options: SetupOptions, ask: boolean): Promise<{ re
   if (!ask || options.readOnly !== undefined || options.registry !== undefined) {
     return { readOnly: options.readOnly ?? false, registry: options.registry ?? false };
   }
-  const picked = await prompt.multiselect({
-    message: "Turn on any of these? (space to toggle, enter to continue)",
-    options: [
-      { value: "readOnly", label: "Read-only mode", hint: "refuses tools that write, so agents can run code without asking" },
-      { value: "registry", label: "Registry", hint: "the model can find and install servers, after you confirm each one" },
-    ],
-    required: false,
-  });
-  if (prompt.isCancel(picked)) return undefined;
+  const picked = await chooseMany("Turn on any of these?", [
+    { value: "readOnly", label: "Read-only mode", hint: "refuses tools that write, so agents can run code without asking" },
+    { value: "registry", label: "Registry", hint: "the model can find and install servers, after you confirm each one" },
+  ]);
+  if (!picked) return undefined;
   return { readOnly: picked.includes("readOnly"), registry: picked.includes("registry") };
 }
 
@@ -177,15 +167,15 @@ async function chooseLaunch(options: SetupOptions, ask: boolean): Promise<string
   const npxLaunch = [npx, "-y", "mcptocodemode"];
   if (options.launch === "npx" || !installed) return npxLaunch;
   if (options.launch === "installed" || !ask) return [installed];
-  const picked = await prompt.select({
-    message: "How should agents start it?",
-    options: [
+  const picked = await chooseOne(
+    "How should agents start it?",
+    [
       { value: "installed", label: "The installed command", hint: `${installed} · starts fastest` },
       { value: "npx", label: "npx", hint: "always the latest version · checks npm at every start" },
     ],
-    initialValue: "installed",
-  });
-  if (prompt.isCancel(picked)) return undefined;
+    "installed",
+  );
+  if (!picked) return undefined;
   return picked === "installed" ? [installed] : npxLaunch;
 }
 
