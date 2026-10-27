@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Changed
+
+- The README is shorter: setup, why, benchmarks, how it works, and commands. Per-agent configs and hiding upstream tools moved to `docs/agents.md`; discovery, options, read-only mode, the registry, OAuth, troubleshooting, and limits moved to `docs/configuration.md`.
+
 ## [0.5.0] - 2026-10-26
 
 ### Added
