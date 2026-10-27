@@ -1,6 +1,6 @@
 {
   "name": "mcptocodemode",
-  "version": "0.4.2",
+  "version": "0.5.0",
   "description": "Stop flooding your agent's prompt with MCP tools: MCPtoCodeMode puts every MCP server behind 3 tools and a sandbox, for Codex, Claude Code, Cursor, Grok, OpenCode, Pi, or any MCP client.",
   "author": "dqniel",
   "keywords": [
@@ -38,7 +38,9 @@
   "scripts": {
     "build": "tsc -p tsconfig.json && node -e \"require('node:fs').chmodSync('dist/cli.js',0o755)\"",
     "test": "vitest run",
+    "test:package": "pnpm build && node scripts/smoke-package.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit",
+    "demo": "pnpm build && node dist/cli.js demo",
     "measure": "node scripts/measure.mjs",
     "bench:model": "node scripts/bench-model.mjs",
     "prepack": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\" && npm run build"

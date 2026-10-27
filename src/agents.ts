@@ -236,15 +236,21 @@ export async function onPath(context: Pick<Context, "env" | "platform">, command
   for (const dir of dirs) {
     for (const name of names) {
       const candidate = path.join(dir, name);
-      try {
-        await access(candidate, constants.X_OK);
-        return candidate;
-      } catch {
-        // Not here.
-      }
+      if (await isExecutable(candidate)) return candidate;
     }
   }
   return undefined;
+}
+
+/** A regular executable file, following symlinks. Does not launch it. */
+export async function isExecutable(file: string): Promise<boolean> {
+  try {
+    if (!(await stat(file)).isFile()) return false;
+    await access(file, constants.X_OK);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 /** Run an agent's own CLI. A failure carries the first line it printed. */

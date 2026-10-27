@@ -16,6 +16,8 @@ export type DiscoverOptions = {
 export type DiscoverResult = CodeModeConfig & {
   files: string[];
   warnings: string[];
+  /** Config paths that produced warnings, separate from potentially sensitive parser excerpts. */
+  warningFiles: string[];
 };
 
 /**
@@ -36,6 +38,7 @@ export async function discoverConfig(options: DiscoverOptions = {}): Promise<Dis
 
   const files: string[] = [];
   const warnings: string[] = [];
+  const warningFiles = new Set<string>();
   let servers: ServerSpec[] = [];
   let limits: Partial<Limits> = {};
 
@@ -49,6 +52,7 @@ export async function discoverConfig(options: DiscoverOptions = {}): Promise<Dis
     if (!info.isFile()) continue;
     if (info.size > MAX_CONFIG_BYTES) {
       warnings.push(`Skipped ${candidate}: larger than 8 MiB`);
+      warningFiles.add(candidate);
       continue;
     }
     let text: string;
@@ -56,6 +60,7 @@ export async function discoverConfig(options: DiscoverOptions = {}): Promise<Dis
       text = await readFile(candidate, "utf8");
     } catch (error) {
       warnings.push(`Skipped ${candidate}: ${error instanceof Error ? error.message : String(error)}`);
+      warningFiles.add(candidate);
       continue;
     }
     const parsed = parseConfig(text, candidate, env);
@@ -66,13 +71,14 @@ export async function discoverConfig(options: DiscoverOptions = {}): Promise<Dis
       parsed.issues.push(...local.issues);
     }
     warnings.push(...parsed.issues);
+    if (parsed.issues.length > 0) warningFiles.add(candidate);
     if (parsed.servers.length === 0 && !parsed.limits) continue;
     files.push(candidate);
     servers = mergeServers(servers, parsed.servers);
     if (parsed.limits) limits = { ...limits, ...parsed.limits };
   }
 
-  return { servers, limits: { ...defaultLimits, ...limits }, files, warnings };
+  return { servers, limits: { ...defaultLimits, ...limits }, files, warnings, warningFiles: [...warningFiles] };
 }
 
 /** Servers Claude Code stores under `projects["<dir>"].mcpServers` in `~/.claude.json`. */

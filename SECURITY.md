@@ -12,7 +12,8 @@ There is no bounty. We answer the report, fix a supported version or say why we 
 
 | Version | Fixes |
 | --- | --- |
-| 0.4.x | Yes |
+| 0.5.x | Yes |
+| 0.4.x | No |
 | 0.3.x | No |
 | 0.2.x | No |
 | 0.1.x | No |

@@ -18,6 +18,10 @@ pnpm test
 
 `pnpm build` writes `dist/`. `node dist/cli.js serve --config mcptocodemode.config.example.json` starts the notes demo.
 
+`pnpm demo` builds and verifies a deterministic mailbox comparison without credentials or external services. After building, `node dist/cli.js demo --json` prints the full measurement. The CLI and full benchmark share the same fixture and measurement implementation.
+
+`pnpm test:package` builds, packs, and installs the real tarball into a temporary directory, then verifies the public CLI and all three tools through stdio MCP. Dependency installation may use npm's network; the checks use synthetic data, isolated config/cache directories, and no credentials. The temporary install is removed afterwards.
+
 `pnpm measure` repeats the comparison in [REPORT.md](REPORT.md). It needs a network connection, `npx`, and `uvx`. `pnpm bench:model` runs the model section after `pnpm measure` has written its fixtures. It needs `OPENROUTER_API_KEY` in the environment or in `.env`, and costs about $1.40 with the default models. CI runs neither.
 
 Node.js 20 stopped receiving security fixes on 30 April 2026. CI still runs it because `engines` allows it. Use 22, 24, or 26 for daily work.
@@ -32,7 +36,7 @@ Node.js 20 stopped receiving security fixes on 30 April 2026. CI still runs it b
 
 ## Pull requests
 
-Use the pull request template. CI runs `pnpm typecheck` and `pnpm test` on the latest patch of Node.js 20, 22, 24, and 26, and a package job builds `dist/` and runs `node scripts/release.mjs check`.
+Use the pull request template. CI runs `pnpm typecheck` and `pnpm test` on the latest patch of Node.js 20, 22, 24, and 26. The package matrix uses those same majors to build `dist/`, run `node scripts/release.mjs check`, and install/test the tarball.
 
 ## Releases
 

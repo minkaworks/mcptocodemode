@@ -21,7 +21,9 @@ import type { Limits } from "./types.js";
 import { login, logout, nestingDepth, SELF_NAME, UpstreamPool } from "./upstream.js";
 import { VERSION } from "./version.js";
 
-const command = process.argv[2];
+const requestedCommand = process.argv[2];
+const wantsHelp = requestedCommand === "--help" || requestedCommand === "-h" || process.argv.slice(3).some((arg) => arg === "--help" || arg === "-h");
+const command = wantsHelp ? undefined : requestedCommand;
 
 // A failed command prints one line, not a stack trace.
 process.on("uncaughtException", fail);
@@ -32,7 +34,26 @@ function fail(error: unknown): never {
   process.exit(1);
 }
 
-if (command === "demo-upstream") {
+if (command === "--version" || command === "-v") {
+  process.stdout.write(`${VERSION}\n`);
+} else if (command === "demo") {
+  if (process.argv.slice(3).some((arg) => arg !== "--json")) throw new Error("Usage: cm demo [--json]");
+  const { runDemo } = await import("./demo.js");
+  process.stdout.write(await runDemo(process.argv.includes("--json")));
+} else if (command === "doctor") {
+  const args = process.argv.slice(3);
+  for (let i = 0; i < args.length; i += 1) {
+    if (args[i] === "--json") continue;
+    if (args[i] === "--config" && args[i + 1] && !args[i + 1]!.startsWith("--")) { i += 1; continue; }
+    throw new Error("Usage: cm doctor [--config file ...] [--json]");
+  }
+  const { diagnose, formatDiagnosis } = await import("./doctor.js");
+  const configs = flags("--config");
+  if (configs.length === 0 && process.env.CODEMODE_CONFIG) configs.push(process.env.CODEMODE_CONFIG);
+  const report = await diagnose({ configs });
+  process.stdout.write(process.argv.includes("--json") ? `${JSON.stringify(report, null, 2)}\n` : formatDiagnosis(report));
+  if (!report.ok) process.exitCode = 1;
+} else if (command === "demo-upstream") {
   await serveDemo();
 } else if (command === "serve") {
   await serve();
@@ -63,8 +84,9 @@ if (command === "demo-upstream") {
 } else {
   // Usage uses the name it was started as: mcptocodemode, or the cm alias.
   const self = commandName();
-  process.stderr.write(
-    [
+  const usage = [
+      `${self} demo [--json]`,
+      `${self} doctor [--config file ...] [--json]`,
       `${self} setup [--agents claude-code,codex,...] [--read-only] [--registry] [--npx] [--yes] [--dry-run] [--remove]`,
       `${self} serve [--config file ...] [--no-cache] [--lazy] [--read-only [--allow server.method ...]] [--registry]`,
       `${self} sdk [--config file ...] [--out api.d.ts]`,
@@ -76,8 +98,11 @@ if (command === "demo-upstream") {
       `${self} login <server> [--port 33418]`,
       `${self} logout <server>`,
       `${self} demo-upstream`,
+      `${self} --version`,
       "",
       "setup adds mcptocodemode to the coding agents on this machine. It shows what changes and asks first.",
+      "demo compares real MCP calls on synthetic mail without keys, configuration, or network access.",
+      "doctor checks configuration without starting servers or showing credentials. Exit 1 means an error was found.",
       "A config file is this project's JSON, standard mcpServers JSON, or [mcp_servers.*] TOML.",
       "With no --config, serve reads the MCP configs already on this machine.",
       "One upstream that fails to connect is reported and skipped.",
@@ -90,9 +115,9 @@ if (command === "demo-upstream") {
       "add saves a registry server to your config, after you confirm.",
       "login signs in to a remote server with OAuth in your browser. serve then uses that sign-in.",
       "",
-    ].join("\n"),
-  );
-  process.exit(command ? 1 : 0);
+    ].join("\n");
+  (wantsHelp || !command ? process.stdout : process.stderr).write(usage);
+  process.exit(command && !wantsHelp ? 1 : 0);
 }
 
 /** `--registry` or `CODEMODE_REGISTRY=1`. Off by default: searching sends the query to the registry. */
@@ -416,6 +441,7 @@ async function inspect(kind: "sdk" | "list"): Promise<void> {
         process.stdout.write(`${server.ident} (${tools.length})\n`);
         for (const tool of tools) process.stdout.write(`  ${tool.method}\n`);
       }
+      if (pool.failures.length > 0 || mode.catalog.servers.length === 0) process.exitCode = 1;
       return;
     }
     const typescript = mode.sdk();

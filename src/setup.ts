@@ -108,7 +108,12 @@ export async function runSetup(options: SetupOptions = {}): Promise<{ changed: s
     prompt.note(
       [
         "Restart those agents to load it.",
+        "Setup keeps your existing servers enabled. To expose only three tools,",
+        "keep upstreams in a separate config and point serve --config at it;",
+        "then remove their direct entries from the agent after verifying cm list.",
         "",
+        `${cyan("cm demo")}            ${dim("try a local comparison without an API key")}`,
+        `${cyan("cm doctor")}          ${dim("check config without starting servers")}`,
         `${cyan("cm find postgres")}   ${dim("find a server in the MCP registry")}`,
         `${cyan("cm add <name>")}      ${dim("install one")}`,
         `${cyan("cm login <server>")}  ${dim("sign in to a remote server")}`,

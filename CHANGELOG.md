@@ -6,6 +6,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-10-26
+
+### Added
+
+- `cm demo` (or `pnpm demo` from source) runs a synthetic mailbox task through plain MCP and Code Mode without API keys or external services. It verifies both answers and prints returned bytes and upstream call counts. `--json` exposes the full measurement. The demo ships in the npm package.
+- `cm doctor [--config file ...] [--json]` checks config parsing, unresolved environment variables, executable availability, working directories, and remote URL syntax without starting servers, contacting endpoints, or changing files. Reports omit command arguments, URLs, headers, environment values, and parser excerpts. Errors exit 1.
+- `--version` prints the package version. `--help`, `-h`, and `<command> --help` show usage and exit successfully without running commands.
+- Package smoke tests install the real tarball into a temporary directory and verify demo, doctor, help/version, failure exit codes, and all three tools through a stdio MCP client. CI runs package checks on Node 20, 22, 24, and 26.
+
+### Fixed
+
+- `doctor` identifies malformed discovered config files without printing parser excerpts, and mirrors POSIX command lookup when PATH is absent.
+- `doctor` skips this package's source-style `node .../cli.js serve` entry, including common Node options such as `--enable-source-maps`, instead of reporting it as a usable upstream.
+- `list` exits 1 if any upstream fails or there are no usable upstreams, while still displaying the working servers.
+- Executable detection no longer treats a directory on PATH as an installed command.
+- Setup and README explain that adding Code Mode does not hide upstream tools, and show how to preserve their definitions in a separate config before removing direct entries from an agent.
+
 ## [0.4.2] - 2026-10-23
 
 ### Changed
@@ -136,7 +153,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - A reference config for the official servers in [modelcontextprotocol/servers](https://github.com/modelcontextprotocol/servers).
 - [REPORT.md](REPORT.md) and `pnpm measure`, comparing flat MCP, an inline SDK, and progressive Code Mode.
 
-[Unreleased]: https://github.com/minkaworks/mcptocodemode/compare/v0.4.2...HEAD
+[Unreleased]: https://github.com/minkaworks/mcptocodemode/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/minkaworks/mcptocodemode/compare/v0.4.2...v0.5.0
 [0.4.2]: https://github.com/minkaworks/mcptocodemode/compare/v0.4.1...v0.4.2
 [0.4.1]: https://github.com/minkaworks/mcptocodemode/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/minkaworks/mcptocodemode/compare/v0.3.0...v0.4.0

@@ -5,12 +5,24 @@
 One MCP server in front of all the MCP servers you already use. Your model sees three tools instead of hundreds, and it writes one short program instead of making dozens of tool calls.
 
 ```bash
+npx -y mcptocodemode demo
+```
+
+Try the deterministic mailbox comparison without credentials or configuration.
+Then connect the MCP servers your coding agents already use:
+
+```bash
 npx -y mcptocodemode setup
 ```
 
 That finds the coding agents on your machine (Claude Code, Codex, Cursor, Grok, OpenCode, Pi, Claude Desktop), lets you pick which ones get MCPtoCodeMode, and adds it after you confirm. It keeps using the MCP servers you already configured for them.
 
 ## Why
+
+This is most useful when an agent pages through results, aggregates many records,
+or passes files between tools. A single tool with a short answer may be simpler
+to call directly. Code Mode still makes the upstream calls; it reduces what has
+to pass through the model, not the work the upstream servers perform.
 
 Connect seven MCP servers and your client puts 55 tool definitions in every prompt. Then ask it something like *"read these 25 order files and total the paid ones"*. That is 26 tool calls and 26 model turns, and each turn re-reads every file that came before it.
 
@@ -29,6 +41,21 @@ return { paid: paid.length, total: paid.reduce((sum, order) => sum + order.total
 The code runs in a sandbox with no network, no filesystem, and no credentials. Its only way out is the MCP servers you configured.
 
 ## Benchmarks
+
+Try a local comparison without an API key:
+
+```bash
+npx -y mcptocodemode demo
+```
+
+Once npm has fetched the package, the demo needs no network or configured MCP servers.
+It runs a synthetic mailbox through real MCP transports: count unread threads across
+three pages, then pass a 150 KB attachment to another tool. Both paths must return
+the expected answer. The table compares returned JSON bytes and upstream calls;
+it does not measure tokens, model accuracy, or cost. Code Mode includes its full
+execution envelope, while plain MCP counts returned content blocks. Discovery and
+input bytes are excluded from the table. For the full breakdown,
+run `npx -y mcptocodemode demo --json`, or `cm demo --json` after a global install.
 
 Seven official [reference servers](https://github.com/modelcontextprotocol/servers), 55 tools. Method, raw data, and caveats are in [REPORT.md](REPORT.md).
 
@@ -65,12 +92,16 @@ cm setup
 
 The global install gives you two names for the same command, `mcptocodemode` and the short `cm`. Without installing, run `npx -y mcptocodemode <command>`; `npx cm` would fetch an unrelated npm package.
 
-MCPtoCodeMode reads the MCP configs your agents already have and skips its own entry, so your servers stay where they are. Remove them from an agent if you want its model to see only the three tools.
+MCPtoCodeMode reads the MCP configs your agents already have and skips its own entry.
+`setup` adds Code Mode alongside those servers; it does not hide their direct
+tools. To get the three-tool surface, follow [Expose only three tools](#expose-only-three-tools).
 
 ### Commands
 
 | Command | What it does |
 | --- | --- |
+| `cm demo [--json]` | Verify a local mailbox comparison without keys or configuration. |
+| `cm doctor [--config file] [--json]` | Check configuration without starting servers or contacting endpoints. |
 | `cm setup` | Add MCPtoCodeMode to the coding agents you pick. `--remove` takes it out. |
 | `cm list` | Connect to every configured server and print what the model can call. |
 | `cm find <words>` | Search the official MCP registry. |
@@ -80,6 +111,76 @@ MCPtoCodeMode reads the MCP configs your agents already have and skips its own e
 | `cm login <server>` | Sign in to a remote server with OAuth in your browser. `logout` forgets it. |
 | `cm serve` | Run the MCP server. This is what agents start. |
 | `cm sdk --out api.d.ts` | Write the TypeScript the sandbox implements. |
+| `cm --version` | Print the installed version. `--help` prints usage without running a command. |
+
+### Expose only three tools
+
+Keep the upstream definitions available to MCPtoCodeMode while removing their
+direct exposure to the agent. Start with a copy of the definitions you already
+use, in a separate file such as `/absolute/path/servers.json`:
+
+```json
+{
+  "mcpServers": {
+    "notes": { "command": "your-notes-server", "args": [] }
+  }
+}
+```
+
+Replace the example with your real upstream command and keep credentials in
+environment variables such as `${TOKEN}`. First check the file with
+`cm doctor --config /absolute/path/servers.json`, then test connections with `cm list --config /absolute/path/servers.json`.
+The second command starts the upstreams; the first does not.
+
+Point the agent's `codemode` entry at that file:
+
+```json
+{
+  "mcpServers": {
+    "codemode": {
+      "command": "npx",
+      "args": ["-y", "mcptocodemode", "serve", "--config", "/absolute/path/servers.json"]
+    }
+  }
+}
+```
+
+After verifying that Code Mode reaches the upstreams, remove their direct
+entries from the agent's config, keeping the separate file. Restart the agent
+and check its tool list: Code Mode should expose `search`, `describe`, and
+`execute`. The agent's built-in tools are separate and remain available.
+Keep a backup of the original agent config for rollback.
+
+For the first conversation, ask: "Use Code Mode search to show which upstream
+servers are available and describe one read-only method. Do not execute it."
+Then try a small read-only task before moving on to workflows that write data.
+
+### Troubleshooting
+
+Run a local configuration check:
+
+```bash
+npx -y mcptocodemode doctor
+npx -y mcptocodemode doctor --config /absolute/path/servers.json --json
+```
+
+`doctor` checks the same discovered config precedence as `serve`, or only the
+explicit `--config` files. It detects unresolved environment variables, missing
+executables, invalid working directories, and malformed remote URLs. It prints
+server names and config paths, withholds commands, arguments, URLs, headers,
+environment values and parser excerpts, and exits 1 on configuration errors.
+It does not test authentication, tool behavior, remote availability, or whether
+an executable's script arguments exist.
+Self-entry detection recognizes normal npx/global launches and direct Node
+launches with common options such as `--enable-source-maps`. Other launch
+wrappers or Node options require the live connection check.
+Use `cm list` to test connections;
+it now exits 1 when any upstream fails, while still listing the working ones.
+
+If a GUI agent cannot find a command that works in your terminal, check the
+environment that starts that agent: its PATH and variables can differ. If
+read-only mode refuses a method, check the upstream's annotations and the
+documented `--allow` option. If OAuth fails, see [Remote servers with sign-in](#remote-servers-with-sign-in).
 
 ### By hand
 
