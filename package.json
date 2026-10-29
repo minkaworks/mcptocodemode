@@ -59,7 +59,7 @@
     "zod": "^4.6.6"
   },
   "devDependencies": {
-    "@types/node": "^24.0.0",
+    "@types/node": "^26.6.5",
     "express": "^5.3.0",
     "typescript": "^5.9.0",
     "vitest": "^4.1.12"
