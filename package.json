@@ -38,9 +38,10 @@
   "scripts": {
     "build": "tsc -p tsconfig.json && node -e \"require('node:fs').chmodSync('dist/cli.js',0o755)\"",
     "test": "vitest run",
-    "test:package": "pnpm build && node scripts/smoke-package.mjs",
+    "test:package": "bun run build && node scripts/smoke-package.mjs",
+    "test:bun": "bun test ./test",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "demo": "pnpm build && node dist/cli.js demo",
+    "demo": "bun run build && node dist/cli.js demo",
     "measure": "node scripts/measure.mjs",
     "bench:model": "node scripts/bench-model.mjs",
     "prepack": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\" && npm run build"
@@ -48,7 +49,7 @@
   "engines": {
     "node": ">=20"
   },
-  "packageManager": "pnpm@10.28.0",
+  "packageManager": "bun@1.4.5",
   "license": "MIT",
   "dependencies": {
     "@clack/core": "^1.5.1",

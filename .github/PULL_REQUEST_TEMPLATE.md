@@ -4,8 +4,8 @@
 
 ## Verification
 
-- [ ] `pnpm typecheck`
-- [ ] `pnpm test`
+- [ ] `bun run typecheck`
+- [ ] `bun run test`
 
 ## Contract
 

@@ -8,23 +8,25 @@ A contribution is licensed under the MIT license in [LICENSE](LICENSE).
 
 ## Setup
 
-Install [Node.js](https://nodejs.org/) 20 or newer and pnpm 10.28.0. Both are declared in `package.json` (`engines` and `packageManager`).
+Install [Bun](https://bun.sh/) 1.4.5 and [Node.js](https://nodejs.org/) 20 or newer. Both are declared in `package.json` (`packageManager` and `engines`). Bun installs dependencies and runs the scripts. Node runs the tests, because the published package runs on Node.
 
 ```bash
-pnpm install
-pnpm typecheck
-pnpm test
+bun install
+bun run typecheck
+bun run test
 ```
 
-`pnpm build` writes `dist/`. `node dist/cli.js serve --config mcptocodemode.config.example.json` starts the notes demo.
+`bun run build` writes `dist/`. `node dist/cli.js serve --config mcptocodemode.config.example.json` starts the notes demo.
 
-`pnpm demo` builds and verifies a deterministic mailbox comparison without credentials or external services. After building, `node dist/cli.js demo --json` prints the full measurement. The CLI and full benchmark share the same fixture and measurement implementation.
+`bun run demo` builds and verifies a deterministic mailbox comparison without credentials or external services. After building, `node dist/cli.js demo --json` prints the full measurement. The CLI and full benchmark share the same fixture and measurement implementation.
 
-`pnpm test:package` builds, packs, and installs the real tarball into a temporary directory, then verifies the public CLI and all three tools through stdio MCP. Dependency installation may use npm's network; the checks use synthetic data, isolated config/cache directories, and no credentials. The temporary install is removed afterwards.
+`bun run test:package` builds, packs, and installs the real tarball into a temporary directory, then verifies the public CLI and all three tools through stdio MCP. Dependency installation may use npm's network; the checks use synthetic data, isolated config/cache directories, and no credentials. The temporary install is removed afterwards.
 
-`pnpm measure` repeats the comparison in [REPORT.md](REPORT.md). It needs a network connection, `npx`, and `uvx`. `pnpm bench:model` runs the model section after `pnpm measure` has written its fixtures. It needs `OPENROUTER_API_KEY` in the environment or in `.env`, and costs about $1.40 with the default models. CI runs neither.
+`bun run measure` repeats the comparison in [REPORT.md](REPORT.md). It needs a network connection, `npx`, and `uvx`. `bun run bench:model` runs the model section after `bun run measure` has written its fixtures. It needs `OPENROUTER_API_KEY` in the environment or in `.env`, and costs about $1.40 with the default models. CI runs neither.
 
 Node.js 20 stopped receiving security fixes on 30 April 2026. CI still runs it because `engines` allows it. Use 22, 24, or 26 for daily work.
+
+Bun is also a supported runtime. `bun run test:bun` runs the same tests with `bun test`, and `bun dist/cli.js serve` starts the server on Bun.
 
 ## Changes
 
@@ -36,12 +38,12 @@ Node.js 20 stopped receiving security fixes on 30 April 2026. CI still runs it b
 
 ## Pull requests
 
-Use the pull request template. CI runs `pnpm typecheck` and `pnpm test` on the latest patch of Node.js 20, 22, 24, and 26. The package matrix uses those same majors to build `dist/`, run `node scripts/release.mjs check`, and install/test the tarball.
+Use the pull request template. CI runs `bun run typecheck` and `bun run test` on the latest patch of Node.js 20, 22, 24, and 26, and `bun run test:bun` on Bun. The package matrix uses those same majors to build `dist/`, run `node scripts/release.mjs check`, and install/test the tarball.
 
 ## Releases
 
 1. In one commit on `main`, set `version` in `package.json` and move the `Unreleased` entries into a dated `## [X.Y.Z] - YYYY-MM-DD` section, with its compare link at the bottom of `CHANGELOG.md`.
-2. `pnpm build && node scripts/release.mjs check` passes locally.
+2. `bun run build && node scripts/release.mjs check` passes locally.
 3. `git tag -a vX.Y.Z -m vX.Y.Z && git push origin vX.Y.Z`.
 
 [`.github/workflows/release.yml`](.github/workflows/release.yml) checks the tag against the version and the changelog, stages the package on npm with provenance through trusted publishing, and creates the GitHub release from that changelog section. The version goes live when a maintainer approves the staged package with their passkey, on npmjs.com or with `npm stage list mcptocodemode` and `npm stage approve <id>`. Do not run `npm publish` by hand.

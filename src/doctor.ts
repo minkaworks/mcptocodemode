@@ -106,10 +106,10 @@ function unresolvedVariables(server: ServerSpec): string[] {
 async function isWrapper(server: ServerSpec, cwd: string): Promise<boolean> {
   const command = path.basename(server.command ?? "").replace(/\.(cmd|exe)$/i, "");
   if (((command === "mcptocodemode" || command === "cm") && server.args?.[0] === "serve") ||
-    ((command === "npx" || command === "pnpm") && (server.args ?? []).some((arg) => /^mcptocodemode(?:@[^/]+)?$/.test(arg)) && (server.args ?? []).includes("serve"))) return true;
+    ((command === "npx" || command === "pnpm" || command === "bunx") && (server.args ?? []).some((arg) => /^mcptocodemode(?:@[^/]+)?$/.test(arg)) && (server.args ?? []).includes("serve"))) return true;
   // Also recognize the source-style launch without executing it. Match this
   // package's entrypoint by real path, not an arbitrary file named cli.js.
-  if (command !== "node") return false;
+  if (command !== "node" && command !== "bun") return false;
   const args = server.args ?? [];
   const index = nodeScriptIndex(args);
   if (index === undefined || args[index + 1] !== "serve") return false;

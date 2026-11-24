@@ -2,7 +2,7 @@
 
 Measured on 23 October 2026, Node v26.12.1, macOS, with the code in the `Unreleased` section of [CHANGELOG.md](CHANGELOG.md), after 0.2.1. The model section is older and says which build it ran. No model was in the loop. A script drove the same eight upstream calls through two hosts, so the numbers are about bytes and time, not about whether a model writes good code.
 
-The servers are the reference implementations in [modelcontextprotocol/servers](https://github.com/modelcontextprotocol/servers), pinned in `mcptocodemode.reference.example.json`: everything, filesystem, memory, sequential thinking, time, git, and fetch. All seven connected. Together they expose 55 tools. Raw output is `experiments/reference-servers.json`. Repeat with `pnpm build && pnpm measure`.
+The servers are the reference implementations in [modelcontextprotocol/servers](https://github.com/modelcontextprotocol/servers), pinned in `mcptocodemode.reference.example.json`: everything, filesystem, memory, sequential thinking, time, git, and fetch. All seven connected. Together they expose 55 tools. Raw output is `experiments/reference-servers.json`. Repeat with `bun run build && bun run measure`.
 
 Three shapes:
 
@@ -215,7 +215,7 @@ Neither model finished the mail task through plain MCP. Both paged and counted c
 
 The log task is where output types matter. Before signatures carried `outputSchema`, `filesystem.read_text_file` read as `Promise<unknown>`. Haiku returned the whole file from `execute` to see its shape, then misread the `{ ok, result }` envelope: 5 turns and 242,886 input tokens, more than plain MCP. With `Promise<{ content: string }>` in the signature it filters in the sandbox on the first try.
 
-Raw results, with a per-turn trace of every tool call, are in `experiments/model-bench.json`. Repeat with `OPENROUTER_API_KEY=... pnpm build && pnpm bench:model`; `BENCH_TASKS` picks tasks, `BENCH_RUNS` sets the runs, and `BENCH_MAX_RUN_COST` (default $1) stops a run that spends more. This run cost $2.77.
+Raw results, with a per-turn trace of every tool call, are in `experiments/model-bench.json`. Repeat with `OPENROUTER_API_KEY=... bun run build && bun run bench:model`; `BENCH_TASKS` picks tasks, `BENCH_RUNS` sets the runs, and `BENCH_MAX_RUN_COST` (default $1) stops a run that spends more. This run cost $2.77.
 
 ## What this does not say
 
