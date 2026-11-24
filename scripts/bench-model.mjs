@@ -2,7 +2,7 @@
 // every upstream tool exposed directly (plain MCP) and once through the three
 // MCPtoCodeMode tools. Tokens and cost are what OpenRouter reports.
 //
-//   OPENROUTER_API_KEY=... pnpm build && node scripts/bench-model.mjs
+//   OPENROUTER_API_KEY=... bun run build && node scripts/bench-model.mjs
 //   BENCH_MODELS=anthropic/claude-haiku-5.5 BENCH_RUNS=1 node scripts/bench-model.mjs
 //   BENCH_APPEND=1 adds this run's results to the existing file instead of replacing them.
 //
@@ -38,14 +38,14 @@ process.env.CODEMODE_MEMORY_FILE = process.env.CODEMODE_MEMORY_FILE ?? path.join
 process.env.CODEMODE_GIT_REPO = gitRepo;
 
 if (!existsSync(path.join(fsRoot, "orders")) || !existsSync(path.join(gitRepo, ".git"))) {
-  process.stderr.write("Fixtures are missing. Run `pnpm measure` once to write them.\n");
+  process.stderr.write("Fixtures are missing. Run `bun run measure` once to write them.\n");
   process.exit(1);
 }
 
 const SYSTEM =
   "You are an agent with MCP tools. Use them to answer. When you are done, reply with only the JSON object the task asks for, with no other text.";
 
-/** Deterministic tasks over the fixtures `pnpm measure` writes. */
+/** Deterministic tasks over the fixtures `bun run measure` writes. */
 const tasks = [
   {
     id: "log",

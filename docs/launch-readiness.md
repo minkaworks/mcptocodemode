@@ -8,7 +8,7 @@ Stop adding features for this launch. After publishing and verifying this change
 
 ## What can be demonstrated
 
-After release, the shortest demonstration is `npx -y mcptocodemode demo`. Before release, use `pnpm install --frozen-lockfile && pnpm demo` in a checkout. The demo runs real MCP calls against an in-process synthetic mailbox, counts unread threads across three pages, and passes a 150,000-byte synthetic attachment to another tool.
+After release, the shortest demonstration is `npx -y mcptocodemode demo`. Before release, use `bun install --frozen-lockfile && bun run demo` in a checkout. The demo runs real MCP calls against an in-process synthetic mailbox, counts unread threads across three pages, and passes a 150,000-byte synthetic attachment to another tool.
 
 The verified answer is 10 unread threads, target `t21`, and 150,000 indexed bytes. Both paths perform six upstream tool calls. The observed plain result content totals 230,668 UTF-8 JSON bytes; the full Code Mode execute envelope is about 362 bytes (timing fields can change its size). The attachment stays in the host, represented by a handle in the sandbox.
 

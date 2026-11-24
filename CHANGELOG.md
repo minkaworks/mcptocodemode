@@ -6,9 +6,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Added
+
+- Bun is a supported runtime. CI runs the tests with `bun test`, builds, and runs the offline demo on Bun.
+
 ### Changed
 
+- The repository uses Bun instead of pnpm to install and run scripts. `bun.lock` replaces `pnpm-lock.yaml` and `package-lock.json`. The tests still run on Node 20, 22, 24, and 26.
+- The build uses TypeScript 7.
 - The README is shorter: setup, why, benchmarks, how it works, and commands. Per-agent configs and hiding upstream tools moved to `docs/agents.md`; discovery, options, read-only mode, the registry, OAuth, troubleshooting, and limits moved to `docs/configuration.md`.
+
+### Fixed
+
+- `doctor` also skips this package's source-style `bun .../cli.ts serve` and `bunx mcptocodemode serve` entries instead of reporting them as usable upstreams.
 
 ## [0.5.0] - 2026-10-26
 
