@@ -363,7 +363,7 @@ export class SandboxSession {
       const args = argHandles.map((handle) => vm.dump(handle));
       const deferred = vm.newPromise();
       if (!run?.alive) {
-        const handle = vm.newString("Execution already finished");
+        const handle = vm.newError("Execution already finished");
         deferred.reject(handle);
         handle.dispose();
         return deferred.handle;
@@ -382,8 +382,9 @@ export class SandboxSession {
         },
         (error: unknown) => {
           if (!run.alive) return;
+          // An Error, so guest code can read `error.message` in a catch.
           const message = error instanceof Error ? error.message : String(error);
-          const handle = vm.newString(message);
+          const handle = vm.newError(message);
           deferred.reject(handle);
           handle.dispose();
           void deferred.settled.then(() => {

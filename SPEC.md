@@ -134,14 +134,14 @@ When the run fails, or any call in it failed, `calls` has one entry per call, in
 
 Neither form records arguments or payloads. Those stay in the sandbox unless the code returns them.
 
-On failure, `ok` is false and `error` is a string. A failed call fails the run unless the code catches it. A second `execute` that arrives while one is running returns `{ "ok": false, "error": "Another execute is still running." }` and does not touch the session.
+On failure, `ok` is false and `error` is a string. A failed call rejects with an `Error` whose `message` is the upstream's or the host's message, and fails the run unless the code catches it. A second `execute` that arrives while one is running returns `{ "ok": false, "error": "Another execute is still running." }` and does not touch the session.
 
 ## Sandbox
 
 Inside the isolate:
 
 - One global per connected upstream server. The global's name is the server name sanitized to an identifier (`google-calendar` becomes `google_calendar`). A server that did not connect has no global.
-- Each upstream tool is a method. The method name is the tool name sanitized the same way. Hyphens become underscores. Collisions get a numeric suffix.
+- Each upstream tool is a method. The method name is the tool name sanitized the same way. Hyphens become underscores. Collisions get a numeric suffix. A method is a property, so a JavaScript keyword stays as it is (`files.delete`); only `constructor` and `prototype` are suffixed (`constructor_`).
 - `resources` and `prompts` are reserved on every server. A tool with one of those names is suffixed (`resources_2`).
 - A method takes one object argument and returns a Promise. No required fields means the argument may be omitted.
 - `codemode.search(query, options?)` and `codemode.describe(target)` do the same work as the outer tools, and their results stay in the sandbox.

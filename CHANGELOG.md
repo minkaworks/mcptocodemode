@@ -6,6 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Changed
+
+- A tool whose name is a JavaScript keyword keeps it as its method name: `files.delete(...)`, not `files.delete_(...)`. Methods are properties, so only `constructor` and `prototype` still get a suffix. Code or `--allow` entries that use the old `_` name need the plain name.
+
+### Fixed
+
+- A failed tool call rejects with an `Error` inside the sandbox, so `catch (error) { error.message }` reads the message instead of `undefined`.
+- `doctor` skips `node` or `bun` launching `dist/cli.js` or `src/cli.ts` of any checkout or install of this package, not only the copy running `doctor`. It still checks the package name, so an unrelated `cli.js` is not skipped.
+
 ## [0.5.1] - 2026-11-25
 
 ### Added

@@ -1,4 +1,4 @@
-import { uniqueIdent } from "./ident.js";
+import { uniqueIdent, uniqueMethodIdent } from "./ident.js";
 import type { Catalog, JsonSchema, ListedTool, ServerNamespace, ToolRecord } from "./types.js";
 
 const EMPTY_INPUT: JsonSchema = { type: "object", properties: {}, additionalProperties: false };
@@ -118,7 +118,7 @@ export function namespaceWithIdent(serverName: string, ident: string, tools: Lis
     server: serverName,
     serverIdent: ident,
     name: tool.name,
-    method: uniqueIdent(tool.name, usedMethods),
+    method: uniqueMethodIdent(tool.name, usedMethods),
     description: (tool.description ?? "").trim(),
     inputSchema: asSchema(tool.inputSchema),
     ...(tool.outputSchema && typeof tool.outputSchema === "object" ? { outputSchema: tool.outputSchema } : {}),

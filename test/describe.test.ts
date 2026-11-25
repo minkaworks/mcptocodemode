@@ -54,7 +54,7 @@ describe("describe", () => {
     expect(sdk).toContain("declare const google_calendar: {");
     expect(sdk).toContain("list_events(input: {");
     expect(sdk).toContain("resources: {");
-    expect(sdk).toContain("delete_(input?:");
+    expect(sdk).toContain("delete(input?:");
   });
 
   it("types the resolved value from outputSchema and leaves the rest unknown", () => {
