@@ -120,6 +120,23 @@ describe("configuration diagnosis", () => {
     expect((await diagnose({ configs: [file], cwd: root, env: {} })).servers).toBe(1);
   });
 
+  it("recognizes another checkout or install of this package, but not a lookalike", async () => {
+    const { root, file } = await fixture({});
+    const checkout = path.join(root, "checkout");
+    await mkdir(path.join(checkout, "src"), { recursive: true });
+    await mkdir(path.join(checkout, "dist"), { recursive: true });
+    await writeFile(path.join(checkout, "src", "cli.ts"), "");
+    await writeFile(path.join(checkout, "dist", "cli.js"), "");
+    await writeFile(path.join(checkout, "package.json"), JSON.stringify({ name: "mcptocodemode" }));
+    for (const [command, entry] of [["bun", "src/cli.ts"], ["node", "dist/cli.js"]] as const) {
+      await writeFile(file, JSON.stringify({ mcpServers: { self: { command, args: [path.join(checkout, entry), "serve"] } } }));
+      expect((await diagnose({ configs: [file], cwd: root, env: {} })).servers, entry).toBe(0);
+    }
+    await writeFile(path.join(checkout, "package.json"), JSON.stringify({ name: "something-else" }));
+    await writeFile(file, JSON.stringify({ mcpServers: { other: { command: process.execPath, args: [path.join(checkout, "dist/cli.js"), "serve"] } } }));
+    expect((await diagnose({ configs: [file], cwd: root, env: {} })).servers).toBe(1);
+  });
+
   it("recognizes own Node launches after common flags without hiding inline or unrelated programs", async () => {
     const cli = fileURLToPath(new URL("../src/cli.ts", import.meta.url));
     const { root, file } = await fixture({});

@@ -95,6 +95,14 @@ describe("sandbox", () => {
     expect(result.calls[0]).toMatchObject({ method: "get", ok: false });
   });
 
+  it("rejects a failed tool call with an Error the guest can read", async () => {
+    const result = await mode().execute(`
+      try { await notes.get({ id: "missing" }); }
+      catch (error) { return { isError: error instanceof Error, message: error.message }; }
+    `);
+    expect(result.result).toEqual({ isError: true, message: "No note missing" });
+  });
+
   it("stops a tight loop at the deadline", async () => {
     const result = await mode().execute(`while (true) {}`, { timeoutMs: 200 });
     expect(result.ok).toBe(false);

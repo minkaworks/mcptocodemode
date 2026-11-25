@@ -61,7 +61,7 @@ export {
   type InstallResult,
 } from "./install.js";
 export { defaultCacheDir, fileCache, specKey, type CatalogCache } from "./cache.js";
-export { toIdent, uniqueIdent } from "./ident.js";
+export { toIdent, uniqueIdent, uniqueMethodIdent } from "./ident.js";
 export {
   DEFAULT_CONNECT_TIMEOUT_MS,
   DEPTH_ENV,

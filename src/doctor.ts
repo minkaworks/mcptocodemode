@@ -1,6 +1,5 @@
 import { readFile, realpath, stat } from "node:fs/promises";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 import { isExecutable, onPath } from "./agents.js";
 import { mergeServers, parseConfig, type ServerSpec } from "./config.js";
 import { discoverConfig, type DiscoverOptions } from "./discover.js";
@@ -107,22 +106,22 @@ async function isWrapper(server: ServerSpec, cwd: string): Promise<boolean> {
   const command = path.basename(server.command ?? "").replace(/\.(cmd|exe)$/i, "");
   if (((command === "mcptocodemode" || command === "cm") && server.args?.[0] === "serve") ||
     ((command === "npx" || command === "pnpm" || command === "bunx") && (server.args ?? []).some((arg) => /^mcptocodemode(?:@[^/]+)?$/.test(arg)) && (server.args ?? []).includes("serve"))) return true;
-  // Also recognize the source-style launch without executing it. Match this
-  // package's entrypoint by real path, not an arbitrary file named cli.js.
+  // Also recognize the source-style launch without executing it: this
+  // package's entrypoint in any checkout or install, found by real path and
+  // the package name beside it, not an arbitrary file named cli.js.
   if (command !== "node" && command !== "bun") return false;
   const args = server.args ?? [];
   const index = nodeScriptIndex(args);
   if (index === undefined || args[index + 1] !== "serve") return false;
   const entrypoint = args[index];
   if (!entrypoint) return false;
-  const root = fileURLToPath(new URL("../", import.meta.url));
   const script = path.resolve(cwd, server.cwd ?? ".", entrypoint);
   const actual = await realpath(script).catch(() => undefined);
   if (!actual) return false;
-  for (const entry of ["dist/cli.js", "src/cli.ts"]) {
-    if (actual === await realpath(path.join(root, entry)).catch(() => undefined)) return true;
-  }
-  return false;
+  const root = path.dirname(path.dirname(actual));
+  if (!["dist/cli.js", "src/cli.ts"].includes(path.relative(root, actual).split(path.sep).join("/"))) return false;
+  const pkg = await readFile(path.join(root, "package.json"), "utf8").then((text) => JSON.parse(text) as { name?: unknown } | null, () => undefined);
+  return pkg?.name === "mcptocodemode";
 }
 
 /** Conservative recognition: unknown options and inline programs need a live connection check. */

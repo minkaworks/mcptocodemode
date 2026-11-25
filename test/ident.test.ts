@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { toIdent, uniqueIdent } from "../src/ident.js";
+import { toIdent, uniqueIdent, uniqueMethodIdent } from "../src/ident.js";
 
 describe("identifiers", () => {
   it("sanitizes MCP tool names into JavaScript identifiers", () => {
@@ -12,5 +12,13 @@ describe("identifiers", () => {
     const used = new Set<string>();
     expect(uniqueIdent("search", used)).toBe("search");
     expect(uniqueIdent("search", used)).toBe("search_2");
+  });
+
+  it("keeps reserved words as method names, since methods are properties", () => {
+    const used = new Set<string>(["resources", "prompts"]);
+    expect(uniqueMethodIdent("delete", used)).toBe("delete");
+    expect(uniqueMethodIdent("new", used)).toBe("new");
+    expect(uniqueMethodIdent("constructor", used)).toBe("constructor_");
+    expect(uniqueMethodIdent("resources", used)).toBe("resources_2");
   });
 });
