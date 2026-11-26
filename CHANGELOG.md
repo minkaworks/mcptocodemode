@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.6.1] - 2026-11-26
+
 ### Changed
 
 - The README says again that `setup` leaves the existing servers in place, so their tools stay visible until they are taken out. It also shows turns in the benchmark table and drops the claim that plain MCP needs one turn per file: the models read files in parallel.
@@ -184,7 +186,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - A reference config for the official servers in [modelcontextprotocol/servers](https://github.com/modelcontextprotocol/servers).
 - [REPORT.md](REPORT.md) and `pnpm measure`, comparing flat MCP, an inline SDK, and progressive Code Mode.
 
-[Unreleased]: https://github.com/minkaworks/mcptocodemode/compare/v0.6.0...HEAD
+[Unreleased]: https://github.com/minkaworks/mcptocodemode/compare/v0.6.1...HEAD
+[0.6.1]: https://github.com/minkaworks/mcptocodemode/compare/v0.6.0...v0.6.1
 [0.6.0]: https://github.com/minkaworks/mcptocodemode/compare/v0.5.1...v0.6.0
 [0.5.1]: https://github.com/minkaworks/mcptocodemode/compare/v0.5.0...v0.5.1
 [0.5.0]: https://github.com/minkaworks/mcptocodemode/compare/v0.4.2...v0.5.0
