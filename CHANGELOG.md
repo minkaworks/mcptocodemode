@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Changed
+
+- The README says again that `setup` leaves the existing servers in place, so their tools stay visible until they are taken out. It also shows turns in the benchmark table and drops the claim that plain MCP needs one turn per file: the models read files in parallel.
+
 ## [0.6.0] - 2026-11-25
 
 ### Changed

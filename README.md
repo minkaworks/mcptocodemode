@@ -1,19 +1,19 @@
 # MCPtoCodeMode
 
-[Specification](SPEC.md) · [Benchmarks](REPORT.md) · [CI](https://github.com/minkaworks/mcptocodemode/actions/workflows/ci.yml) · [MIT License](LICENSE) · [Changelog](CHANGELOG.md)
-
-One MCP server in front of all the MCP servers you already use. Your model sees three tools instead of hundreds, and writes one short program instead of making dozens of tool calls.
+An MCP server that sits in front of your other MCP servers. The model gets three tools, `search`, `describe` and `execute`, and calls your servers from a short JavaScript program. Only the program's result goes back into the conversation.
 
 ```bash
-npx -y mcptocodemode demo    # local comparison, no keys or config
+npx -y mcptocodemode demo    # offline comparison, no keys or config
 npx -y mcptocodemode setup   # add it to your coding agents
 ```
 
-`setup` finds Claude Code, Codex, Cursor, Grok, OpenCode, Pi, and Claude Desktop, lets you pick which get MCPtoCodeMode, shows every file it will touch, and changes them after you confirm. It reuses the MCP servers those agents already have. Restart them afterwards.
+`setup` finds Claude Code, Codex, Cursor, Grok, OpenCode, Pi and Claude Desktop, and asks which of them to configure. It reuses the MCP servers each agent already has, lists every file it will change, and writes nothing until you confirm. Restart the agents afterwards.
 
-## Why
+`setup` does not remove the servers you already had, so until you take them out the agent sees their tools as well as the three new ones. [docs/agents.md](docs/agents.md#expose-only-three-tools) shows how to take them out without losing their config.
 
-Ask an agent with seven MCP servers to *"read these 25 order files and total the paid ones"*. That is 55 tool definitions in every prompt, 26 tool calls, and 26 turns, each re-reading every file before it. With MCPtoCodeMode the model writes this once, and only the answer comes back:
+## When it helps
+
+A program can page through results, aggregate records, or pass a file from one tool to another without any of it entering the conversation. For example, to total the paid orders in a folder of JSON files:
 
 ```js
 const listing = await filesystem.list_directory({ path: "/data/orders" });
@@ -25,52 +25,51 @@ const paid = orders.filter((order) => order.status === "paid");
 return { paid: paid.length, total: paid.reduce((sum, order) => sum + order.total, 0) };
 ```
 
-It helps most when an agent pages through results, aggregates records, or passes files between tools. For a single call with a short answer, calling directly is simpler.
+Called directly, every file would come back into the conversation for the model to add up. Here only `{ paid, total }` comes back.
+
+For one call with a short answer, calling the tool directly is simpler.
 
 ## Benchmarks
 
-Claude Sonnet 5.5 on real tasks, seven [reference servers](https://github.com/modelcontextprotocol/servers) with 55 tools:
+Claude Sonnet 5.5 on three tasks, three runs each, against seven [reference servers](https://github.com/modelcontextprotocol/servers) that expose 55 tools:
 
 | | Plain MCP | MCPtoCodeMode |
 | --- | ---: | ---: |
-| Correct answers, 3 tasks × 3 runs | 9 / 9 | 9 / 9 |
-| Input tokens | 531,480 | **94,002** (5.7× fewer) |
-| Cost | $1.108 | **$0.222** (5× less) |
-| Mail: page threads, pass a 150 KB image between tools | failed, $0.756, 79 s | **correct**, $0.061, 10 s |
-| Tool definitions in every prompt | 31,179 bytes | **2,996 bytes** |
+| Correct answers | 9 / 9 | 9 / 9 |
+| Input tokens | 531,480 | 94,002 |
+| Cost | $1.108 | $0.222 |
+| Turns | 21 | 29 |
+| Tool definitions in every prompt | 31,179 bytes | 2,996 bytes |
 
-It takes a few more turns (29 vs 21), since the model usually searches before it writes the program. Method, raw data, and caveats are in [REPORT.md](REPORT.md).
+Both setups answered every task correctly. MCPtoCodeMode took more turns because the model usually ran `search` first. A fourth task paged through mail and passed a 150 KB image between tools. Through plain MCP, Sonnet didn't produce a correct answer ($0.756, 79 s). Through MCPtoCodeMode it did ($0.061, 10 s), because the image went from one tool to the next as a handle and never entered the conversation.
+
+[REPORT.md](REPORT.md) has the method, raw data and limits: three small tasks, two models and one machine.
 
 ## How it works
 
-The model gets three tools:
+- **`search`** finds methods by keyword and returns TypeScript signatures for the top results.
+- **`describe`** returns the signatures of one server (`"notes"`) or one method (`"notes.get"`).
+- **`execute`** runs JavaScript in which each server is a global, for example `await notes.get({ id: "1" })`. It returns the program's result, its `console.log` output and the list of methods it called. Anything the program puts on `state` is still there on the next run.
 
-- **`search`** finds methods by keyword, with TypeScript signatures for the top hits.
-- **`describe`** returns the full signature of a server (`"notes"`) or a method (`"notes.get"`).
-- **`execute`** runs JavaScript where each server is a global: `await notes.get({ id: "1" })`. Only the return value, `console.log` output, and the list of methods called come back. Whatever the code puts on `state` survives to the next run.
-
-The code runs in a QuickJS sandbox with no network, filesystem, or credentials; its only way out is your MCP servers. The sandbox doesn't limit what a tool does, though: a tool that sends an email still sends it. Use [`--read-only`](docs/configuration.md#read-only-mode) to block writes. The full contract is [SPEC.md](SPEC.md).
+The program runs in a QuickJS sandbox with no network, filesystem or credentials, so it can only reach the world through your MCP servers. The tools themselves are not restricted: one that sends email still sends it. [`--read-only`](docs/configuration.md#read-only-mode) refuses any method its server does not mark as read-only. The full contract is in [SPEC.md](SPEC.md).
 
 ## Commands
 
-Install globally with `npm install -g mcptocodemode` to get `cm` (also `mcptocodemode`). Without installing, use `npx -y mcptocodemode <command>`; `npx cm` is an unrelated package.
+`npm install -g mcptocodemode` installs the `cm` and `mcptocodemode` commands. Without installing, run `npx -y mcptocodemode <command>`. Note that `npx cm` runs a different package.
 
 | Command | What it does |
 | --- | --- |
 | `cm setup` | Add MCPtoCodeMode to the agents you pick. `--remove` takes it out. |
-| `cm demo [--json]` | Run the local mailbox comparison. |
+| `cm demo [--json]` | Run the offline mail comparison. |
 | `cm doctor` | Check configuration without starting servers. |
-| `cm list` | Connect to every server and print what the model can call. |
-| `cm find <words>` · `cm index` | Search the official MCP registry, or download it for instant search. |
-| `cm add <name>` · `cm remove <server>` | Save a registry server to your config, or take one out. |
-| `cm login <server>` · `cm logout <server>` | Sign in to a remote server with OAuth, or forget it. |
-| `cm serve` | Run the MCP server. This is what agents start. |
-| `cm sdk --out api.d.ts` | Write the TypeScript the sandbox implements. |
+| `cm list` | Connect to every server and print the methods available. |
+| `cm find <words>` · `cm index` | Search the official MCP registry, or download it for faster search. |
+| `cm add <name>` · `cm remove <server>` | Add a registry server to your config, or remove one. |
+| `cm login <server>` · `cm logout <server>` | Sign in to a remote server with OAuth, or sign out. |
+| `cm serve` | Run the MCP server. Agents start this. |
+| `cm sdk --out api.d.ts` | Write the TypeScript declarations for the sandbox. |
 
-## Docs
-
-- [Agents](docs/agents.md): manual config for each agent, and how to hide upstream tools so only three remain.
-- [Configuration](docs/configuration.md): discovery, options, read-only mode, registry, OAuth, troubleshooting, limits.
+[docs/agents.md](docs/agents.md) has the manual config for each agent. [docs/configuration.md](docs/configuration.md) covers server discovery, options, the registry, OAuth, troubleshooting and limits.
 
 ## Library
 
@@ -85,10 +84,12 @@ const mode = new CodeMode(catalog, async (call) => ({ id: call.input.id, title: 
 await mode.execute(`return await notes.get({ id: "1" });`);
 ```
 
-`beforeCall` can refuse a method before it runs (`readOnlyPolicy` is a ready-made one), `createCodeModeServer(mode)` makes it an MCP server, and `UpstreamPool` connects to real servers.
+- `beforeCall` can refuse a call before it runs. `readOnlyPolicy(catalog)` returns a `beforeCall` that blocks writes.
+- `createCodeModeServer(mode)` serves a `CodeMode` over MCP.
+- `UpstreamPool` connects to real MCP servers.
 
 ## Contributing
 
-Setup and tests: [CONTRIBUTING.md](CONTRIBUTING.md). Questions: [SUPPORT.md](SUPPORT.md). Vulnerabilities: [SECURITY.md](SECURITY.md). Conduct: [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md). This repository follows the [minkaworks repository standard](STANDARD.md).
+[CONTRIBUTING.md](CONTRIBUTING.md) covers setup, tests and releases, and [CHANGELOG.md](CHANGELOG.md) lists every change. For questions see [SUPPORT.md](SUPPORT.md), and report vulnerabilities through [SECURITY.md](SECURITY.md). MIT licensed.
 
-The idea comes from [Cloudflare Code Mode](https://blog.cloudflare.com/code-mode/). This project speaks plain MCP, so any MCP client can use it.
+The idea comes from [Cloudflare's Code Mode](https://blog.cloudflare.com/code-mode/). This project uses plain MCP, so it works with any MCP client.
