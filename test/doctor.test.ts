@@ -107,16 +107,16 @@ describe("configuration diagnosis", () => {
 
   it("does not count this package's source-style serve entry as an upstream", async () => {
     const cli = fileURLToPath(new URL("../src/cli.ts", import.meta.url));
-    const { root, file } = await fixture({ mcpServers: { codemode: { command: process.execPath, args: [cli, "serve"] } } });
+    const { root, file } = await fixture({ mcpServers: { codemode: { command: "node", args: [cli, "serve"] } } });
     const report = await diagnose({ configs: [file], cwd: root, env: {} });
     expect(report.ok).toBe(false);
     expect(report.servers).toBe(0);
     expect(report.checks[0]?.message).toContain("No upstream MCP servers");
-    await writeFile(file, JSON.stringify({ mcpServers: { notes: { command: process.execPath, args: [cli, "demo-upstream"] } } }));
+    await writeFile(file, JSON.stringify({ mcpServers: { notes: { command: "node", args: [cli, "demo-upstream"] } } }));
     expect((await diagnose({ configs: [file], cwd: root, env: {} })).servers).toBe(1);
     const other = path.join(root, "cli.js");
     await writeFile(other, "This is an unrelated server, not Code Mode.");
-    await writeFile(file, JSON.stringify({ mcpServers: { other: { command: process.execPath, args: [other, "serve"] } } }));
+    await writeFile(file, JSON.stringify({ mcpServers: { other: { command: "node", args: [other, "serve"] } } }));
     expect((await diagnose({ configs: [file], cwd: root, env: {} })).servers).toBe(1);
   });
 
@@ -133,7 +133,7 @@ describe("configuration diagnosis", () => {
       expect((await diagnose({ configs: [file], cwd: root, env: {} })).servers, entry).toBe(0);
     }
     await writeFile(path.join(checkout, "package.json"), JSON.stringify({ name: "something-else" }));
-    await writeFile(file, JSON.stringify({ mcpServers: { other: { command: process.execPath, args: [path.join(checkout, "dist/cli.js"), "serve"] } } }));
+    await writeFile(file, JSON.stringify({ mcpServers: { other: { command: "node", args: [path.join(checkout, "dist/cli.js"), "serve"] } } }));
     expect((await diagnose({ configs: [file], cwd: root, env: {} })).servers).toBe(1);
   });
 
@@ -149,11 +149,11 @@ describe("configuration diagnosis", () => {
       ["--"],
     ];
     for (const flags of options) {
-      await writeFile(file, JSON.stringify({ mcpServers: { self: { command: process.execPath, args: [...flags, cli, "serve"] } } }));
+      await writeFile(file, JSON.stringify({ mcpServers: { self: { command: "node", args: [...flags, cli, "serve"] } } }));
       expect((await diagnose({ configs: [file], cwd: root, env: {} })).servers, flags.join(" ")).toBe(0);
     }
     for (const flags of [["--eval", "someInlineProgram"], ["--title"], ["--unknown-option"]]) {
-      await writeFile(file, JSON.stringify({ mcpServers: { other: { command: process.execPath, args: [...flags, cli, "serve"] } } }));
+      await writeFile(file, JSON.stringify({ mcpServers: { other: { command: "node", args: [...flags, cli, "serve"] } } }));
       expect((await diagnose({ configs: [file], cwd: root, env: {} })).servers, flags.join(" ")).toBe(1);
     }
   });
